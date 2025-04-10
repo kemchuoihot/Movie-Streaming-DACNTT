@@ -3,7 +3,7 @@ import { auth } from '../../Login/Firebase';
 import defaultAvatar from './User.jpg';
 import { Link } from 'react-router-dom';
 import { updateProfile } from 'firebase/auth';
-import ChangePasswordModal from './ChangePass'; // Import modal
+import ChangePasswordModal from './ChangePass'; 
 
 function UserInf() {
   const [user, setUser] = useState(null);
@@ -35,6 +35,33 @@ function UserInf() {
   };
 
   const handleUpdateProfile = async () => {
+    setUpdateSuccess(null);
+    setUpdateError(null);
+  
+    try {
+      if (user) {
+        const updates = {};
+        if (displayName !== user.displayName) {
+          updates.displayName = displayName;
+        }
+        if (gender) {
+          console.log("Updating gender:", gender);
+        }
+  
+        if (Object.keys(updates).length > 0) {
+          await updateProfile(auth.currentUser, updates);
+          setUpdateSuccess('Hồ sơ đã được cập nhật thành công!');
+          setUser({ ...user, displayName: displayName });
+        } else if (gender) {
+          setUpdateSuccess('Thông tin giới tính đã được ghi nhận.');
+        } else {
+          setUpdateSuccess('Không có thay đổi nào được thực hiện.');
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật hồ sơ:", error);
+      setUpdateError('Đã xảy ra lỗi khi cập nhật hồ sơ.');
+    }
   };
 
   const openChangePasswordModal = () => {

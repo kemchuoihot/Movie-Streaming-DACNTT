@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import userImg from './User.jpg'
 import { auth } from '../../Login/Firebase';
+import { useNavigate } from 'react-router-dom';
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [username, setUsername] = useState('');
   const menuRef = useRef(null);
-
+  const navigate = useNavigate();
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -32,10 +33,17 @@ function UserMenu() {
         setUsername(''); // Clear username if no user is logged in
       }
     });
-  
-    // Clean up the subscription when the component unmounts
     return () => unsubscribe();
   }, []);
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      console.log('Người dùng đã đăng xuất thành công.');
+      navigate('/signin'); 
+    } catch (error) {
+      console.error('Lỗi khi đăng xuất:', error);
+    }
+  };
   return (
     <li className="relative" ref={menuRef}>
       <button
@@ -90,12 +98,12 @@ function UserMenu() {
             > 
               Tài khoản
             </Link>
-            <Link
-              to="/thoat"
-              className="flex items-center px-4 py-2 hover:bg-[#0e264073] text-white"
+            <button 
+              onClick={handleLogout}
+              className="flex items-center px-4 py-2 hover:bg-[#0e264073] text-white w-full text-left"
             >
-              Thoát
-            </Link>
+              Đăng xuất
+            </button>
           </div>
         </div>
       )}
