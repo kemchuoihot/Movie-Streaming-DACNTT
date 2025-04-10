@@ -2,14 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../../Login/Firebase';
 import defaultAvatar from './User.jpg';
 import { Link } from 'react-router-dom';
+import { updateProfile } from 'firebase/auth';
+import ChangePasswordModal from './ChangePass'; // Import modal
 
 function UserInf() {
   const [user, setUser] = useState(null);
+  const [displayName, setDisplayName] = useState('');
+  const [gender, setGender] = useState('');
+  const [updateSuccess, setUpdateSuccess] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        setDisplayName(currentUser.displayName || '');
       } else {
         setUser(null);
       }
@@ -17,6 +25,30 @@ function UserInf() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleDisplayNameChange = (event) => {
+    setDisplayName(event.target.value);
+  };
+
+  const handleGenderChange = (event) => {
+    setGender(event.target.value);
+  };
+
+  const handleUpdateProfile = async () => {
+  };
+
+  const openChangePasswordModal = () => {
+    setIsChangePasswordModalOpen(true);
+  };
+
+  const closeChangePasswordModal = () => {
+    setIsChangePasswordModalOpen(false);
+  };
+
+  const handlePasswordChangeSuccess = () => {
+    alert('Mật khẩu đã được thay đổi thành công!');
+    closeChangePasswordModal();
+  };
 
   if (!user) {
     return <div>Bạn chưa đăng nhập.</div>;
@@ -29,8 +61,6 @@ function UserInf() {
         className=" bx bx-home absolute top-4 right-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline z-10"
       >
       </Link>
-
-      {/* Sidebar (Quản lý tài khoản) */}
       <div className="bg-[#0e274073] text-white w-64 py-8 px-4">
         <h2 className="text-2xl font-semibold mb-6">Quản lý tài khoản</h2>
         <Link to="" className="block py-2 hover:bg-[#153a61] rounded">
@@ -40,14 +70,13 @@ function UserInf() {
           Danh sách
         </Link>
         <Link to="" className="block py-2 hover:bg-[#153a61] rounded">
-          Xem tiếp
+          Lịch sử
         </Link>
         <Link to="/taikhoan" className="block py-2 hover:bg-[#153a61] rounded">
           <span className="text-yellow-500 mr-2">●</span> Tài khoản
         </Link>
+        
       </div>
-
-      {/* Nội dung chính (Tài khoản) */}
       <div className="flex-1 p-8">
         <div className="bg-[#0e274073] text-white rounded-md shadow-md p-5 mt-6">
           <h2 className="text-xl font-semibold mb-4">Tài khoản</h2>
@@ -75,7 +104,7 @@ function UserInf() {
               id="email"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-[#153a61]"
               value={user.email}
-              readOnly
+              readOnly // just read, no change
             />
           </div>
 
@@ -87,8 +116,8 @@ function UserInf() {
               type="text"
               id="displayName"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-[#153a61]"
-              value={user.displayName || 'Không có'}
-              readOnly
+              value={displayName}
+              onChange={handleDisplayNameChange} // Enable editing
             />
           </div>
 
@@ -97,15 +126,36 @@ function UserInf() {
               Giới tính
             </label>
             <div className="flex items-center">
-              <input type="radio" id="male" name="gender" value="male" className="mr-2" />
+              <input
+                type="radio"
+                id="male"
+                name="gender"
+                value="male"
+                className="mr-2"
+                onChange={handleGenderChange}
+              />
               <label htmlFor="male" className="text-white mr-4">
                 Nam
               </label>
-              <input type="radio" id="female" name="gender" value="female" className="mr-2" />
+              <input
+                type="radio"
+                id="female"
+                name="gender"
+                value="female"
+                className="mr-2"
+                onChange={handleGenderChange}
+              />
               <label htmlFor="female" className="text-white mr-4">
                 Nữ
               </label>
-              <input type="radio" id="other" name="gender" value="other" className="mr-2" />
+              <input
+                type="radio"
+                id="other"
+                name="gender"
+                value="other"
+                className="mr-2"
+                onChange={handleGenderChange}
+              />
               <label htmlFor="other" className="text-white">
                 Không xác định
               </label>
@@ -115,9 +165,28 @@ function UserInf() {
           <button
             className="bg-yellow-500 hover:bg-yellow-700 text-black font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             type="button"
+            onClick={handleUpdateProfile} 
           >
             Cập nhật
           </button>
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 m-3 rounded focus:outline-none focus:shadow-outline"
+            type="button"
+            onClick={openChangePasswordModal}
+          >
+            Đổi mật khẩu
+          </button>
+
+          {updateSuccess && <p className="mt-4 text-green-500">{updateSuccess}</p>}
+          {updateError && <p className="mt-4 text-red-500">{updateError}</p>}
+
+          {isChangePasswordModalOpen && (
+            <ChangePasswordModal
+              onClose={closeChangePasswordModal}
+              onPasswordChangeSuccess={handlePasswordChangeSuccess}
+            />
+          )}
+          
         </div>
       </div>
     </div>

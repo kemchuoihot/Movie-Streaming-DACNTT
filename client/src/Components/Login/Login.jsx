@@ -20,7 +20,6 @@ function LoginPage() {
       const token = await user.getIdToken(); // Lấy ID Token
 
       console.log('Login successful! Token:', token);
-      // Lưu token vào localStorage (hoặc state) để dùng sau
       localStorage.setItem('authToken', token);
 
       const response = await axios.get('http://localhost:5000/protected', {

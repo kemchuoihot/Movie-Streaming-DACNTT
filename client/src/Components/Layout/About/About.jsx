@@ -79,10 +79,10 @@ function UserMenu() {
               Danh sách
             </Link>
             <Link
-              to="/xemtiep"
+              to="/lichsu"
               className="flex items-center px-4 py-2 hover:bg-[#0e264073] text-white"
             >
-              Xem tiếp
+              Lịch sử
             </Link>
             <Link
               to="/taikhoan"
