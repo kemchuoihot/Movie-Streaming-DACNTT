@@ -95,8 +95,7 @@ function LoginPage() {
             <div> {error && <p className="font-medium mb-4 text-sm text-red-700">{error}</p>}</div>
             <div>
               <button
-                type="button" // Changed type to "button" to prevent form submission
-                onClick={handleGoogleSignIn} 
+                type="submit"
                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               >
                 Sign in

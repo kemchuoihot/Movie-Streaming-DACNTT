@@ -56,7 +56,7 @@ function UserInf() {
           <div className="flex items-center mb-6">
             <div className="rounded-full w-24 h-24 overflow-hidden mr-6">
               <img
-                src={user.photoURL || defaultAvatar}
+                src={defaultAvatar}
                 alt="Ảnh đại diện"
                 className="w-full h-full object-cover"
               />
