@@ -9,7 +9,7 @@ const Slide = ({ movie, showFullContent, toggleContent, data }) => {
     <div className="relative">
       <div
         style={{ backgroundImage: `url(${movie.movie.thumb_url})` }}
-        className="w-full h-screen relative"
+        className="w-full h-screen relative bg-cover bg-center "
       ></div>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-gray-950 bg-gray-950 bg-opacity-60 flex items-center justify-between  lg:px-40 space-y-4">
         <div className="relative w-1/2 ml-10 lg:ml-0">
