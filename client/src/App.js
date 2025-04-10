@@ -9,6 +9,8 @@ import Watch from './Components/Watch/Watch';
 import RegisterPage from './Components/Login/Register';
 import LoginPage from './Components/Login/Login';
 import ForgetPasswordPage from './Components/Login/ForgetPassword';
+import AboutPage from './Components/Layout/About/About';
+import UserInf from './Components/Layout/About/UserInf';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
         <Route path='/search' element={<Search />} />
         <Route path='/detail/:slug' element={<Detail />} />
         <Route path='/watch/:slug' element={<Watch />} />
+        <Route path='/about' element={<AboutPage />} />
+        <Route path='/taikhoan' element={<UserInf />} />
       </Routes>
     </Router>
   );

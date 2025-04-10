@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "boxicons/css/boxicons.min.css";
+import AboutNavbar from "../About/About";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [scrollDirection, setScrollDirection] = useState("up");
-
+  const [showAboutNavbar, setShowAboutNavbar] = useState(false);
   useEffect(() => {
     let lastScrollY = window.pageYOffset;
 
@@ -33,7 +34,10 @@ const NavBar = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
-
+  const handleAboutClick = (e) => {
+    e.preventDefault(); // Ngăn chặn hành vi mặc định của link
+    setShowAboutNavbar(!showAboutNavbar);
+  };
   return (
     <>
        <div
@@ -104,15 +108,10 @@ const NavBar = () => {
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/about"
-                  className="text-white text-base font-medium hover:text-blue-400 transition-all group relative"
-                >
-                  <i className="bx bx-user mr-1"></i>About
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
+                <AboutNavbar />
+                
               </li>
+              
             </ul>
           </div>
         </div>

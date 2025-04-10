@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { auth } from './Firebase'; // Import your Firebase auth instance
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider  } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import logo from './logo.png';
+import google from './google.png';
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +31,17 @@ function LoginPage() {
         setError(errorMessage);
       }
   };
+  const handleGoogleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      console.log('Login successful with Google!');
+      navigate('/'); // Redirect to the home page after successful Google login
+    } catch (error) {
+      console.error('Google Sign-in error:', error);
+      setError(error.message); // Display any Google Sign-in errors
+    }
+  };
 
   return (
     <div className='w-full h-full relative bg-[#06121e] bg-cover bg-center'>
@@ -38,7 +50,7 @@ function LoginPage() {
             <img alt='Movie City' src={logo} className='mx-auto h-20 w-auto'/>
             <h2 className='mt-10 text-center yexy-2xl font-bold tracking-tight text-white text-3xl'>Sign In</h2>
         </div>
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm ">
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-sm ">
           <form onSubmit={handleSubmit} method="POST" className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm/6 font-medium text-white">
@@ -83,10 +95,21 @@ function LoginPage() {
             <div> {error && <p className="font-medium mb-4 text-sm text-red-700">{error}</p>}</div>
             <div>
               <button
-                type="submit"
+                type="button" // Changed type to "button" to prevent form submission
+                onClick={handleGoogleSignIn} 
                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               >
                 Sign in
+              </button>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                className="flex w-full justify-center rounded-md bg-white px-3 py-1.5 text-sm/6 font-semibold text-black shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                <img src={google} alt="Google Icon" className='h-6 p-1' />
+                Sign in with Google
               </button>
             </div>
           </form>
