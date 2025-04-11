@@ -1,9 +1,9 @@
-
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  uid: { type: String, required: true, unique: true }, // Firebase UID
+  uid: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
+  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Movie' }],
   createdAt: { type: Date, default: Date.now },
 });
 

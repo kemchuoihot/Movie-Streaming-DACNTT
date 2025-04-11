@@ -69,8 +69,8 @@ function UserMenu() {
                 />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Chào,</p>
-                <p className="text-sm text-white">{username}</p>
+                <p className="text-sm font-semibold text-white">Hi,</p>
+                <p className="text-sm text-white">{username || "Guest"}</p>
               </div>
             </div>
             <hr className="border-[#0e264073] my-2" />

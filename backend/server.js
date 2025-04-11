@@ -57,7 +57,8 @@ app.get('/protected', authenticate, (req, res) => {
     },
   });
 });
-
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 // Khởi động server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
