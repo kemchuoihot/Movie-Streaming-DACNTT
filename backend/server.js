@@ -22,8 +22,8 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch((err) => console.log('MongoDB connection error:', err));
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.log('MongoDB connection error:', err));
 
 // Middleware kiểm tra token
 const authenticate = async (req, res, next) => {
@@ -57,8 +57,12 @@ app.get('/protected', authenticate, (req, res) => {
     },
   });
 });
+
 const authRoutes = require('./routes/auth');
+const movieRoutes = require('./routes/movies'); // Thêm route movies
 app.use('/api/auth', authRoutes);
+app.use('/api/movies', movieRoutes); // Thêm vào server
+
 // Khởi động server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

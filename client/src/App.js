@@ -11,6 +11,7 @@ import LoginPage from './Components/Login/Login';
 import ForgetPasswordPage from './Components/Login/ForgetPassword';
 import AboutPage from './Components/Layout/About/About';
 import UserInf from './Components/Layout/About/UserInf';
+import AdminAddMovie from './Components/AddMovie/AdminAddMovie';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path='/watch/:slug' element={<Watch />} />
         <Route path='/about' element={<AboutPage />} />
         <Route path='/taikhoan' element={<UserInf />} />
+        <Route path='/admin/addmovie' element={<AdminAddMovie />} />
       </Routes>
     </Router>
   );

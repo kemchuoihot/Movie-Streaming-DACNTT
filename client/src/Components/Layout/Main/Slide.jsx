@@ -1,17 +1,27 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { LazyLoadImage } from "react-lazy-load-image-component";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { LazyLoadImage } from 'react-lazy-load-image-component';
+import 'react-lazy-load-image-component/src/effects/blur.css';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 const Slide = ({ movie, showFullContent, toggleContent, data }) => {
+  // Nếu movie chưa có, hiển thị skeleton
+  if (!movie || !movie.movie) {
+    return (
+      <div className="relative h-[600px] md:h-[800px]">
+        <Skeleton height={800} className="w-full h-full relative" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <div
         style={{ backgroundImage: `url(${movie.movie.thumb_url})` }}
-        className="w-full h-screen relative bg-cover bg-center "
+        className="w-full h-screen relative bg-cover bg-center"
       ></div>
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-gray-950 bg-gray-950 bg-opacity-60 flex items-center justify-between  lg:px-40 space-y-4">
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-gray-950 bg-gray-950 bg-opacity-60 flex items-center justify-between lg:px-40 space-y-4">
         <div className="relative w-1/2 ml-10 lg:ml-0">
           <h2 className="text-white text-xl md:text-4xl font-black font-[Montserrat]">
             {movie.movie.name}
@@ -23,12 +33,14 @@ const Slide = ({ movie, showFullContent, toggleContent, data }) => {
             {showFullContent
               ? movie.movie.content
               : `${movie.movie.content?.substring(0, 200)}...`}
-            <button
-              onClick={toggleContent}
-              className="text-blue-500 opacity-80 ml-2 transition-all"
-            >
-              {showFullContent ? "Thu gọn" : "Xem thêm"}
-            </button>
+            {movie.movie.content?.length > 200 && (
+              <button
+                onClick={toggleContent}
+                className="text-blue-500 opacity-80 ml-2 transition-all"
+              >
+                {showFullContent ? 'Thu gọn' : 'Xem thêm'}
+              </button>
+            )}
           </p>
           <p className="text-white text-sm md:text-base mb-5">{movie.movie.time}</p>
           <Link to={`/detail/${movie.movie.slug}`}>
@@ -45,7 +57,7 @@ const Slide = ({ movie, showFullContent, toggleContent, data }) => {
           <LazyLoadImage
             effect="blur"
             src={movie.movie.poster_url}
-            alt="poster_movie"
+            alt={movie.movie.name}
             className="w-4/5 md:w-3/5 rounded-lg mx-auto"
           />
         </div>

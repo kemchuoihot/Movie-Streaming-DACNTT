@@ -45,7 +45,7 @@ const NavBar = () => {
         scrolled ? "sm:bg-gray-900 bg-opacity-90" : "bg-transparent"
       } ${scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"}`}
     >
-      <div className="container max-w-screen-xl mx-auto py-3 px-1 sm:py-6 sm:px-2 lg:grid gap-10 grid-cols-10 justify-between items-center">
+      <div className="container max-w-screen-xl mx-auto py-3 px-1 sm:py-6 sm:px-2 lg:grid gap-10 grid-cols-11 justify-between items-center">
         <div className="col-span-2 lg:block hidden">
           <Link to="/">
             <img
@@ -75,7 +75,7 @@ const NavBar = () => {
             />
           </form>
           </div>
-          <div className="col-span-4 font-medium text-sm gap-36 xl:gap-14 2xl:gap-20 justify-between lg:flex xl:justify-end items-center hidden">
+          <div className="col-span-5 font-medium text-sm gap-36 xl:gap-14 2xl:gap-20 justify-between lg:flex xl:justify-end items-center hidden">
             <ul className="flex lg:gap-10 gap-4">
               <li>
                 <Link

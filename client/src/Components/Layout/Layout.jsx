@@ -10,9 +10,9 @@ function Layout() {
     <>
       <Navbar/>
       <Main/>
-      <Hoathinh/>
+      {/* <Hoathinh/>
       <Phimle/>
-      <Phimbo/>
+      <Phimbo/> */}
       <Footer/>
     </>
   )
