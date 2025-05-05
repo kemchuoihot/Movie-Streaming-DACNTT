@@ -165,7 +165,7 @@ router.get('/search', async (req, res) => {
 });
 
 // Thêm phim (chỉ admin)
-router.post('/admin', authenticate, checkAdmin, async (req, res) => {
+router.post('/admin', authenticate, async (req, res) => {
   try {
     const movie = new Movie(req.body);
     await movie.save();
