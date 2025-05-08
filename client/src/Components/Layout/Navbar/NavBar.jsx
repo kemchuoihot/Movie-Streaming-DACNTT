@@ -45,13 +45,13 @@ const NavBar = () => {
         scrolled ? "sm:bg-gray-900 bg-opacity-90" : "bg-transparent"
       } ${scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"}`}
     >
-      <div className="container max-w-screen-xl mx-auto py-3 px-1 sm:py-6 sm:px-2 lg:grid gap-10 grid-cols-11 justify-between items-center">
+      <div className="container max-w-screen-xl mx-auto py-3 px-1 sm:py-3 sm:px-2 lg:grid gap-10 grid-cols-11 justify-between items-center">
         <div className="col-span-2 lg:block hidden">
           <Link to="/">
             <img
-              src="https://seeklogo.com/images/M/movie-city-hd-logo-D25A7AC34A-seeklogo.com.png"
+              src="https://ik.imagekit.io/thinhpx33/logo.png?updatedAt=1746706738519"
               alt="logo"
-              className="w-full h-10 object-contain rounded-full"
+              className="w-20 h-20 object-cover ml-3 top-2 relative"
             />
           </Link>
         </div>

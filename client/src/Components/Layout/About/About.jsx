@@ -45,7 +45,7 @@ function UserMenu() {
     try {
       await auth.signOut();
       console.log('Người dùng đã đăng xuất thành công.');
-      navigate('/signin');
+      navigate('/');
       setIsMenuOpen(false); // Đóng menu sau khi đăng xuất
     } catch (error) {
       console.error('Lỗi khi đăng xuất:', error);
