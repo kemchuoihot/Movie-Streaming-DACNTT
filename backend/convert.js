@@ -1,16 +1,22 @@
-import { S3Client, ListObjectsCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+/**
+ * @typedef {Object} ResolutionLink
+ * @property {string} resolution
+ * @property {string} s3Key
+ */
+
+import { S3Client, ListObjectsCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import fs from 'fs';
 import path from 'path';
-import { createWriteStream } from 'fs';
+import { createWriteStream, createReadStream } from 'fs';
 import dotenv from 'dotenv';
 dotenv.config();
 
 // Cấu hình AWS S3
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID; 
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const region = process.env.AWS_REGION;
+const region = process.env.AWS_REGION || 'ap-southeast-2';
 
 const s3Client = new S3Client({
   region,
@@ -20,9 +26,9 @@ const s3Client = new S3Client({
   },
 });
 
-
 const bucketName = process.env.S3_BUCKET_NAME || 'testlistmovies';
-const outputBaseDirectory = './converted-videos'; // Thư mục để lưu video đã chuyển sang m3u8
+const outputBaseDirectory = './converted-videos'; // Thư mục gốc
+const s3OutputDirectory = 'videos'; // Thư mục trên S3 để lưu video
 
 // Đảm bảo thư mục gốc tồn tại
 if (!fs.existsSync(outputBaseDirectory)) {
@@ -45,7 +51,7 @@ async function convertMp4ToM3u8(mp4FilePath, outputDirectory, baseFileName, reso
       .output(outputM3u8Path)
       .on('end', () => {
         console.log(`Chuyển đổi thành công: ${mp4FilePath} sang ${outputM3u8Path}`);
-        resolve();
+        resolve(outputM3u8Path); // Resolve về đường dẫn file m3u8
       })
       .on('error', (error) => {
         console.error(`Lỗi trong quá trình chuyển đổi: ${error.message}`);
@@ -55,9 +61,58 @@ async function convertMp4ToM3u8(mp4FilePath, outputDirectory, baseFileName, reso
   });
 }
 
-// Kiểm tra xem thư mục và tệp M3U8 có tồn tại chưa
+// Kiểm tra xem file có tồn tại
 function checkIfExists(filePath) {
   return fs.existsSync(filePath);
+}
+
+// Upload file lên S3
+async function uploadToS3(filePath, s3Key) {
+  const readStream = createReadStream(filePath);
+  const uploadParams = {
+    Bucket: bucketName,
+    Key: s3Key,
+    Body: readStream,
+  };
+
+  try {
+    const result = await s3Client.send(new PutObjectCommand(uploadParams));
+    console.log(`Đã tải lên ${filePath} thành công lên S3 với key ${s3Key}`);
+    return {
+      Location: result.Location,
+      Key: s3Key,
+    }; // Trả về Location và Key
+  } catch (error) {
+    console.error(`Lỗi tải lên ${filePath} lên S3:`, error);
+    throw error;
+  }
+}
+
+// Tạo Master Playlist
+function createMasterPlaylist(videoName, resolutions) {
+  let masterPlaylistContent = '#EXTM3U\n';
+
+  resolutions.forEach((item) => {
+    const bandwidth = estimateBandwidth(item.resolution);
+    masterPlaylistContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${item.resolution}\n`;
+    masterPlaylistContent += `${item.s3Key}\n`;
+  });
+
+  const masterPlaylistPath = path.join(outputBaseDirectory, `${videoName}.m3u8`);
+  fs.writeFileSync(masterPlaylistPath, masterPlaylistContent);
+  return masterPlaylistPath;
+}
+
+// Ước tính băng thông (đơn giản hóa)
+function estimateBandwidth(resolution) {
+  const dimensions = resolution.split('x').map(Number);
+  const pixels = dimensions[0] * dimensions[1];
+
+  // Ước tính rất đơn giản, có thể cần điều chỉnh
+  if (pixels > 1920 * 1080) return 8000000;
+  if (pixels > 1280 * 720) return 5000000;
+  if (pixels > 854 * 480) return 3000000;
+  return 1000000;
 }
 
 // Xử lý video trong bucket S3
@@ -78,6 +133,7 @@ async function processVideos() {
           if (!fs.existsSync(videoOutputDirectory)) {
             fs.mkdirSync(videoOutputDirectory, { recursive: true });
           }
+
           // Kiểm tra nếu thư mục chứa các file m3u8 đã được tạo trước đó, nếu có thì bỏ qua.
           const m3u8Exists = resolutions.some(resolution =>
             fs.existsSync(path.join(videoOutputDirectory, `${baseFileName}-${resolution}.m3u8`))
@@ -87,7 +143,7 @@ async function processVideos() {
             continue; // Chuyển sang video tiếp theo
           }
 
-          // Tải tệp mp4 từ S3
+          // Tải file mp4 từ S3
           const getObjectCommand = new GetObjectCommand({ Bucket: bucketName, Key: mp4Key });
           const response = await s3Client.send(getObjectCommand);
 
@@ -102,20 +158,42 @@ async function processVideos() {
 
           console.log(`Đã tải xuống: ${mp4Key} vào ${tempMp4FilePath}`);
 
+          /** @type {ResolutionLink[]} */
+          const resolutionLinks = []; // Array để lưu thông tin resolution và link S3
+
           for (const resolution of resolutions) {
-            const outputM3u8Key = `${baseFileName}-${resolution}.m3u8`;
-            const outputM3u8Path = path.join(videoOutputDirectory, outputM3u8Key);
+            const outputM3u8Key = `${s3OutputDirectory}/${baseFileName}/${baseFileName}-${resolution}.m3u8`; // Đường dẫn trên S3
+            const outputM3u8Path = path.join(videoOutputDirectory, `${baseFileName}-${resolution}.m3u8`);
 
             // Kiểm tra xem M3U8 đã tồn tại chưa
             if (!checkIfExists(outputM3u8Path)) {
-              await convertMp4ToM3u8(tempMp4FilePath, videoOutputDirectory, baseFileName, resolution);
+              const localM3u8Path = await convertMp4ToM3u8(tempMp4FilePath, videoOutputDirectory, baseFileName, resolution);
               console.log(`Tệp ${outputM3u8Key} đã được lưu tại ${outputM3u8Path}`);
+              try {
+                // Upload file m3u8 lên s3
+                const s3Result = await uploadToS3(localM3u8Path, outputM3u8Key);
+                resolutionLinks.push({ resolution, s3Key: s3Result.Key });
+              } catch (error) {
+                console.error(`Upload failed for ${outputM3u8Key}:`, error);
+                // Xử lý lỗi
+              }
             } else {
               console.log(`Tệp ${outputM3u8Key} đã tồn tại. Bỏ qua việc chuyển đổi.`);
             }
           }
-          fs.unlinkSync(tempMp4FilePath); // Xóa tệp MP4 sau khi chuyển đổi
-          console.log(`Đã xóa tệp tạm: ${tempMp4FilePath}`);
+          fs.unlinkSync(tempMp4FilePath);
+          console.log(`Đã xóa file tạm: ${tempMp4FilePath}`);
+
+          // Tạo và upload Master Playlist
+          const masterPlaylistPath = createMasterPlaylist(baseFileName, resolutionLinks);
+          const masterPlaylistKey = `${s3OutputDirectory}/${baseFileName}/${baseFileName}.m3u8`;
+          try {
+            await uploadToS3(masterPlaylistPath, masterPlaylistKey);
+            console.log(`Đã tải lên Master Playlist: ${masterPlaylistKey}`);
+          } catch (error) {
+                console.error("Failed to upload master playlist", error)
+          }
+          fs.unlinkSync(masterPlaylistPath);
         }
       }
     }
