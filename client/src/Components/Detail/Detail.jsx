@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import "boxicons/css/boxicons.min.css";
 import { fetchMovieDetails } from "../../api/api";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
 import Footer from "../Footer/Footer";
-import { auth } from "../Login/Firebase"; // Import Firebase auth
+import { auth } from '../Login/Firebase';
 import { onAuthStateChanged } from "firebase/auth";
-import Navbar from "../Layout/Navbar/NavBar";
+import axios from "axios";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"
+import NavBar from "../Layout/Navbar/NavBar";
 
 const Detail = () => {
   const { slug } = useParams();
@@ -19,14 +22,43 @@ const Detail = () => {
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteError, setFavoriteError] = useState("");
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Kiểm tra trạng thái đăng nhập
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsLoggedIn(!!user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        try {
+          const token = await user.getIdToken();
+          localStorage.setItem("authToken", token);
+          checkFavorite(user);
+        } catch (err) {
+          console.error("Error getting token:", err);
+          setIsLoggedIn(false);
+          navigate("/login");
+        }
+      } else {
+        setIsLoggedIn(false);
+        localStorage.removeItem("authToken");
+        setIsFavorite(false);
+      }
     });
-    return () => unsubscribe(); // Cleanup
-  }, []);
+    return () => unsubscribe();
+  }, [navigate]);
+
+  const checkFavorite = async (user) => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/movies/favorites", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+      });
+      setIsFavorite(response.data.some((movie) => movie.slug === slug));
+    } catch (err) {
+      console.error("Error checking favorite:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchFilm = async () => {
@@ -51,28 +83,79 @@ const Detail = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) {
       alert("Vui lòng chọn số sao!");
       return;
     }
-    // Lưu đánh giá (tạm thời console.log, có thể gửi API sau)
-    console.log("Rating:", rating, "Comment:", comment);
-    setSubmitted(true);
-    setComment("");
-    setRating(0);
-    // Reset sau 3 giây
-    setTimeout(() => setSubmitted(false), 3000);
+    try {
+      await axios.post(`http://localhost:5000/api/movies/${slug}/rating`, {
+        rating,
+        comment,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+      });
+      setSubmitted(true);
+      setComment("");
+      setRating(0);
+      setTimeout(() => setSubmitted(false), 3000);
+    } catch (error) {
+      console.error("Failed to submit rating:", error);
+      alert("Failed to submit rating. Please try again.");
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!isLoggedIn) {
+      navigate("/login");
+      return;
+    }
+    setFavoriteError("");
+    setIsFavoriteLoading(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No auth token found");
+      }
+      console.log("Toggling favorite, slug:", slug, "Token:", token.slice(0, 10) + "...");
+      if (isFavorite) {
+        const response = await axios.delete(`http://localhost:5000/api/movies/favorites/${slug}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log("Remove favorite response:", response.data);
+        setIsFavorite(false);
+      } else {
+        const response = await axios.post(
+          "http://localhost:5000/api/movies/favorites",
+          { slug },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        console.log("Add favorite response:", response.data);
+        toast.success(isFavorite ? "Xóa khỏi yêu thích!" : "Thêm vào yêu thích!")
+        setIsFavorite(true);
+      }
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+      setFavoriteError(
+        err.response?.data?.message || "Failed to update favorites. Please try again."
+      );
+      toast.error(err.response?.data?.message || "Failed to update favorites.");
+    } finally {
+      setIsFavoriteLoading(false);
+    }
   };
 
   if (!film) {
-    return <div className="h-screen bg-gray-900 text-white">Loading...</div>;
+    return <div className="min-h-screen bg-[#06121e] text-white">Loading...</div>;
   }
 
   return (
     <>
-      <Navbar/>
+      <NavBar/>
+      
       <div
         style={{ backgroundImage: `url(${film.movie.thumb_url})` }}
         className="h-[530px] bg-cover bg-center relative"
@@ -97,7 +180,23 @@ const Detail = () => {
                 </span>
               </button>
             </Link>
-            {/* Phần Rating */}
+            <button
+              onClick={handleToggleFavorite}
+              disabled={isFavoriteLoading}
+              className={`w-full mt-2 py-2 rounded-lg text-white font-semibold transition-colors ${
+                isFavorite ? "bg-red-600 hover:bg-red-700" : "bg-indigo-600 hover:bg-indigo-700"
+              } ${isFavoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {isFavoriteLoading ? (
+                "Loading..."
+              ) : (
+                <>
+                  <i className={`bx ${isFavorite ? "bx-heart" : "bxs-heart"} mr-2`}></i>
+                  {isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+                </>
+              )}
+            </button>
+            {favoriteError && <p className="text-red-500 mt-2 text-center">{favoriteError}</p>}
             <div className="mt-4">
               {isLoggedIn ? (
                 <>
@@ -123,10 +222,7 @@ const Detail = () => {
                               <i
                                 className="bx bxs-star cursor-pointer text-3xl transition-colors duration-200"
                                 style={{
-                                  color:
-                                    ratingValue <= (hover || rating)
-                                      ? "#ffc107"
-                                      : "#e4e5e9",
+                                  color: ratingValue <= (hover || rating) ? "#ffc107" : "#e4e5e9",
                                 }}
                                 onMouseEnter={() => setHover(ratingValue)}
                                 onMouseLeave={() => setHover(null)}
@@ -137,7 +233,7 @@ const Detail = () => {
                       </div>
                       <form onSubmit={handleSubmit} className="w-full max-w-md">
                         <textarea
-                          className="w-full h-24 p-2 bg-gray-800 text-white rounded-lg resize-none"
+                          className="w-full h-24 p-2 bg-gray-800 text-white rounded-lg resize-none focus:ring-2 focus:ring-indigo-600"
                           placeholder="Describe your experience..."
                           value={comment}
                           onChange={(e) => setComment(e.target.value)}

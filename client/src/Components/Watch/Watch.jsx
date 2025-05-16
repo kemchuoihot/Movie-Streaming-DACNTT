@@ -4,6 +4,7 @@ import Hls from 'hls.js';
 import { fetchMovieDetails } from '../../api/api';
 import 'boxicons/css/boxicons.min.css';
 import Footer from '../Footer/Footer';
+import NavBar from '../Layout/Navbar/NavBar';
 
 const Watch = () => {
   const { slug } = useParams();
@@ -71,71 +72,7 @@ const Watch = () => {
 
   return (
     <div>
-      <header
-        className={`fixed top-0 left-0 w-full z-20 transition-all duration-500 ${
-          scrolled ? 'bg-gray-900 bg-opacity-90 border-indigo-600' : 'bg-transparent'
-        }`}
-      >
-        <div className="container max-w-screen-xl mx-auto py-4 px-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <ul className="flex space-x-4 pt-5">
-              <li>
-                <Link to="/" className="text-white text-lg font-bold hover:text-gray-400">
-                  <img
-                    src="https://seeklogo.com/images/M/movie-city-hd-logo-D25A7AC34A-seeklogo.com.png"
-                    alt="logo"
-                    className="w-20 mr-4"
-                  />
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div className="col-span-3 font-medium text-sm gap-36 xl:gap-14 2xl:gap-20 justify-between lg:flex xl:justify-end items-center hidden">
-            <ul className="flex lg:gap-10 gap-4">
-              <li>
-                <Link
-                  to="/"
-                  className="text-white text-base font-medium hover:text-blue-400 relative transition-all group"
-                >
-                  <i className="bx bx-home-alt-2 mr-1"></i>Trang chủ
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/phim-le/1"
-                  className="text-white text-base font-medium hover:text-blue-400 transition-all group relative"
-                >
-                  <i className="bx bx-movie mr-1"></i>Phim lẻ
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/phim-bo/1"
-                  className="text-white text-base font-medium hover:text-blue-400 transition-all group relative"
-                >
-                  <i className="bx bx-tv mr-1"></i>Phim bộ
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/about"
-                  className="text-white text-base font-medium hover:text-blue-400 transition-all group relative"
-                >
-                  <i className="bx bx-user mr-1"></i>About
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </header>
+      <NavBar/>
 
       <div
         className="lg:h-screen bg-center h-96 relative bg-cover"
@@ -146,7 +83,7 @@ const Watch = () => {
           <video
             ref={videoRef}
             controls
-            className="absolute inset-0 mt-20 mx-auto lg:w-[85%] lg:h-[90%] h-[80%] w-[100%]"
+            className="absolute inset-0 mt-28 mx-auto lg:w-[85%] lg:h-[90%] h-[80%] w-[100%]"
             poster={film.movie.poster_url}
           >
             <source src={film.movie.video_url} type="application/vnd.apple.mpegurl" />

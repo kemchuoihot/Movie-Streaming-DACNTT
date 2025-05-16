@@ -90,13 +90,13 @@ function UserInf() {
       </Link>
       <div className="bg-[#0e274073] text-white w-64 py-8 px-4">
         <h2 className="text-2xl font-semibold mb-6">Quản lý tài khoản</h2>
-        <Link to="" className="block py-2 hover:bg-[#153a61] rounded">
+        <Link to="/favorites" className="block py-2 hover:bg-[#153a61] rounded">
           Yêu thích
         </Link>
-        <Link to="" className="block py-2 hover:bg-[#153a61] rounded">
+        <Link to="/watchlist" className="block py-2 hover:bg-[#153a61] rounded">
           Danh sách
         </Link>
-        <Link to="" className="block py-2 hover:bg-[#153a61] rounded">
+        <Link to="/history" className="block py-2 hover:bg-[#153a61] rounded">
           Lịch sử
         </Link>
         <Link to="/taikhoan" className="block py-2 hover:bg-[#153a61] rounded">

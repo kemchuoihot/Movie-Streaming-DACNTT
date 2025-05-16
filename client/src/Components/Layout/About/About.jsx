@@ -8,6 +8,7 @@ function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false); // State kiểm tra đăng nhập
+  const [isAdmin, setIsAdmin] = useState(false); // State kiểm tra admin
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
@@ -31,6 +32,9 @@ function UserMenu() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
+        if (user.email === 'admin@moviecity.com') {
+          setIsAdmin(true);
+        }
         setIsAuthenticated(true);
         setUsername(user.displayName || 'Người dùng');
       } else {
@@ -98,7 +102,7 @@ function UserMenu() {
                 </div>
                 <hr className="border-[#0e264073] my-2" />
                 <Link
-                  to="/yeuthich"
+                  to="/favorites"
                   className="flex items-center px-4 py-2 hover:bg-[#0e264073] text-white"
                   onClick={() => setIsMenuOpen(false)}
                 >

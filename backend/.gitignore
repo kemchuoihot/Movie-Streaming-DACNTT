@@ -7,7 +7,7 @@
 .env
 # testing
 /coverage
-
+/converted-videos
 *.json
 # production
 /build

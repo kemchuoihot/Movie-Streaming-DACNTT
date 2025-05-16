@@ -7,6 +7,13 @@ const admin = require('firebase-admin');
 dotenv.config();
 const app = express();
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  next();
+});
+
 // Khởi tạo Firebase Admin
 const serviceAccount = require(process.env.FIREBASE_CREDENTIALS_PATH || './film-demo-b3215-firebase-adminsdk-fbsvc-52da389e4c.json');
 admin.initializeApp({
@@ -59,9 +66,11 @@ app.get('/protected', authenticate, (req, res) => {
 });
 
 const authRoutes = require('./routes/auth');
-const movieRoutes = require('./routes/movies'); // Thêm route movies
+const movieRoutes = require('./routes/movies');
+const userRoutes = require('./routes/users'); // Thêm route users
 app.use('/api/auth', authRoutes);
-app.use('/api/movies', movieRoutes); // Thêm vào server
+app.use('/api/movies', movieRoutes);
+app.use('/api/users', userRoutes); // Thêm vào server
 
 // Khởi động server
 const PORT = process.env.PORT || 5000;
