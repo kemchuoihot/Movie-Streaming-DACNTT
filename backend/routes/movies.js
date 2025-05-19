@@ -236,7 +236,7 @@ router.delete('/admin/movies/:id', async (req, res) => {
 });
 
 // Thêm phim vào yêu thích
-router.post("/favorites", async (req, res) => {
+router.post("/favorites", authenticate, async (req, res) => {
   try {
     const { slug } = req.body;
     if (!slug) {
@@ -262,7 +262,7 @@ router.post("/favorites", async (req, res) => {
 });
 
 // Xóa phim khỏi yêu thích
-router.delete("/favorites/:slug", async (req, res) => {
+router.delete("/favorites/:slug", authenticate, async (req, res) => {
   try {
     const movie = await Movie.findOne({ slug: req.params.slug });
     if (!movie) {
@@ -282,7 +282,7 @@ router.delete("/favorites/:slug", async (req, res) => {
 });
 
 // Lấy danh sách yêu thích
-router.get("/favorites", async (req, res) => {
+router.get("/favorites", authenticate, async (req, res) => {
   try {
     const user = await User.findOne({ uid: req.user.uid }).populate('favorites', 'slug name posterUrl');
     if (!user || !user.favorites.length) {
@@ -296,3 +296,4 @@ router.get("/favorites", async (req, res) => {
 });
 
 module.exports = router;
+
