@@ -14,6 +14,7 @@ import ForgetPasswordPage from './Components/Login/ForgetPassword';
 import Admin from './Components/Admin/Admin';
 import UserInf from './Components/Layout/About/UserInf';
 import Favorites from './Components/Layout/About/Favorites';
+import History from './Components/Layout/About/History';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
         <Route path='/admin' element={<Admin />} />
         <Route path='/taikhoan' element={<UserInf />} />
         <Route path='/favorites' element={<Favorites />} />
+        <Route path='/history' element={<History />} />
       </Routes>
     </Router>
   );

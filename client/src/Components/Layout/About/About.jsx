@@ -109,14 +109,7 @@ function UserMenu() {
                   Yêu thích
                 </Link>
                 <Link
-                  to="/danhsach"
-                  className="flex items-center px-4 py-2 hover:bg-[#0e264073] text-white"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Danh sách
-                </Link>
-                <Link
-                  to="/lichsu"
+                  to="/history"
                   className="flex items-center px-4 py-2 hover:bg-[#0e264073] text-white"
                   onClick={() => setIsMenuOpen(false)}
                 >

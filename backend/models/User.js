@@ -8,6 +8,13 @@ const userSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Movie' }],
   createdAt: { type: Date, default: Date.now },
+  watchHistory: [
+    {
+      movie: { type: mongoose.Schema.Types.ObjectId, ref: 'Movie' },
+      stoppedAt: { type: Number, default: 0 }, // Số phút đã xem
+      lastWatched: { type: Date, default: Date.now }, // Thời gian lưu lịch sử
+    },
+  ],
 });
 
 module.exports = mongoose.model('User', userSchema);

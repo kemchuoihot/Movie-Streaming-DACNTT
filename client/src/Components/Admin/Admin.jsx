@@ -267,7 +267,7 @@ const Admin = () => {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
@@ -332,7 +332,7 @@ const Admin = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   {loading ? 'Đang xử lý...' : form._id ? 'Cập nhật' : 'Thêm'}
                 </button>
@@ -436,8 +436,8 @@ const Admin = () => {
 
       {/* Movie Popup */}
       {isMoviePopupOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#0e274073] p-6 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          <div className="bg-[#0e2740de] p-6 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
             <h2 className="text-2xl text-white font-semibold mb-4">
               {editMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}
             </h2>
@@ -566,7 +566,7 @@ const Admin = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   {loading ? 'Đang xử lý...' : editMovie ? 'Cập nhật' : 'Thêm'}
                 </button>

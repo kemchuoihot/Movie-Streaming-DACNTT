@@ -93,9 +93,6 @@ function UserInf() {
         <Link to="/favorites" className="block py-2 hover:bg-[#153a61] rounded">
           Yêu thích
         </Link>
-        <Link to="/watchlist" className="block py-2 hover:bg-[#153a61] rounded">
-          Danh sách
-        </Link>
         <Link to="/history" className="block py-2 hover:bg-[#153a61] rounded">
           Lịch sử
         </Link>
