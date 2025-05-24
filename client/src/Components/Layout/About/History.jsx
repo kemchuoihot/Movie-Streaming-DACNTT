@@ -138,10 +138,10 @@ const History = () => {
       <div className="bg-[#0e274073] text-white w-64 py-8 px-4">
         <h2 className="text-2xl font-semibold mb-6">Quản lý tài khoản</h2>
         <Link to="/favorites" className="block py-2 hover:bg-[#153a61] rounded">
-          <span className="text-yellow-500 mr-2">●</span> Yêu thích
+          Yêu thích
         </Link>
         <Link to="/history" className="block py-2 bg-[#153a61] rounded">
-          Lịch sử
+          <span className="text-yellow-500 mr-2">●</span> Lịch sử
         </Link>
         <Link to="/taikhoan" className="block py-2 hover:bg-[#153a61] rounded">
           Tài khoản

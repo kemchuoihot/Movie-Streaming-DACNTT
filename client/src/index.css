@@ -1,52 +1,220 @@
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+/* Tải font tối ưu */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Poppins:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
-body, html{
-    font-family: 'Poppins', sans-serif;
-    font-weight: 400;
+body, html {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
-input:focus, textarea:focus,select:focus{
-    outline: 0 !important;
-    box-shadow: none !important;
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 0 !important;
+  box-shadow: none !important;
 }
-.hoveres{
-    @apply hidden
-}
-.hoveres:hover .hoveres{
-    @apply flex-colo
-} 
-.flex-colo{
+
+/* Tùy chỉnh class Tailwind */
+@layer components {
+  .flex-colo {
     @apply flex flex-col justify-center items-center;
-}
-.flex-rows{
+  }
+  .flex-rows {
     @apply flex flex-row justify-center items-center;
-}
-.flex-btn{
+  }
+  .flex-btn {
     @apply flex justify-center items-center;
-}
-.transition{
+  }
+  .transition {
     @apply transition-all duration-300 ease-in-out;
-}
-
-.zIndex{
+  }
+  .zIndex {
     @apply z-50;
+  }
 }
 
+/* Sửa lỗi hoveres - Sử dụng group-hover */
+.group:hover .group-hover\:visible {
+  @apply flex flex-col justify-center items-center;
+}
+
+/* Hiệu ứng gradient động */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 150% 150%;
+  animation: gradient 5s ease infinite;
+}
+
+/* Hiệu ứng fadeIn */
 @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
   }
-  
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-in-out;
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Hiệu ứng slide cho phần trái (text) */
+@keyframes slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-left-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+}
+
+@keyframes slide-right-in {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Hiệu ứng slide cho phần phải (poster) */
+@keyframes slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-right-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+}
+
+@keyframes slide-left-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-left {
+  animation: slide-left 0.5s ease-in-out;
+}
+
+.animate-slide-left-out {
+  animation: slide-left-out 0.5s ease-in-out;
+}
+
+.animate-slide-right-in {
+  animation: slide-right-in 0.5s ease-in-out;
+}
+
+.animate-slide-right {
+  animation: slide-right 0.5s ease-in-out;
+}
+
+.animate-slide-right-out {
+  animation: slide-right-out 0.5s ease-in-out;
+}
+
+.animate-slide-left-in {
+  animation: slide-left-in 0.5s ease-in-out;
+}
+
+/* Tối ưu cuộn ngang */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+  contain: paint;
+}
+
+/* Tối ưu hiệu ứng hover */
+.group {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.group-hover\:visible {
+  @apply hidden;
+}
+
+.group:hover .group-hover\:visible {
+  @apply block;
+}
+
+/* Tùy chỉnh nút điều hướng */
+button:focus {
+  outline: none;
+}
+
+/* Đảm bảo responsive */
+@media (max-width: 640px) {
+  .sm\:hidden {
+    display: block !important;
+  }
+  .sm\:block {
+    display: none !important;
+  }
+}
+
+/* Tối ưu hiệu suất */
+.group,
+.animate-gradient,
+.no-scrollbar {
+  contain: paint;
+}
