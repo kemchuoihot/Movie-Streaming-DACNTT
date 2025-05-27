@@ -339,7 +339,7 @@ const Watch = () => {
         {film.movie.video_url ? (
           <div
             ref={videoContainerRef}
-            className={`absolute inset-0 mt-28 mx-auto lg:w-[85%] lg:h-[90%] h-[80%] w-[100%] flex flex-col justify-center items-center ${
+            className={`absolute inset-0 mt-28 mx-auto lg:w-[85%] lg:h-[90%] h-[80%] w-[100%] flex flex-col justify-center items-center rounded-2xl ${
               isFullscreen ? "fullscreen" : ""
             }`}
           >

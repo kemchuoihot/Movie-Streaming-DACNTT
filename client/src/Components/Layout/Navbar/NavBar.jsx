@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "boxicons/css/boxicons.min.css";
 import AboutNavbar from "../About/About";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [scrollDirection, setScrollDirection] = useState("up");
-  const [showAboutNavbar, setShowAboutNavbar] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const navigate = useNavigate();
+
   useEffect(() => {
     let lastScrollY = window.pageYOffset;
 
@@ -34,86 +37,126 @@ const NavBar = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
-  const handleAboutClick = (e) => {
-    e.preventDefault(); // Ngăn chặn hành vi mặc định của link
-    setShowAboutNavbar(!showAboutNavbar);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchKeyword.trim()) {
+      navigate(`/search?query=${encodeURIComponent(searchKeyword.trim())}`);
+      setSearchKeyword("");
+      setIsMobileMenuOpen(false);
+    }
+  };
+
   return (
     <>
-       <div
-      className={`fixed w-full top-0 z-20 transition-all duration-700 ${
-        scrolled ? "sm:bg-gray-900 bg-opacity-90" : "bg-transparent"
-      } ${scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"}`}
-    >
-      <div className="container max-w-screen-xl mx-auto py-3 px-1 sm:py-3 sm:px-2 lg:grid gap-10 grid-cols-11 justify-between items-center">
-        <div className="col-span-2 lg:block hidden">
-          <Link to="/">
-            <img
-              src="https://ik.imagekit.io/thinhpx33/logo.png?updatedAt=1746706738519"
-              alt="logo"
-              className="w-20 h-20 object-cover ml-3 top-2 relative"
-            />
-          </Link>
-        </div>
-        <div className="col-span-4">
-          <form
-            action={`/search/`}
-            method="get"
-            className="sm:w-5/6 mx-auto w-4/5 md:w-full text-sm bg-gray-300 rounded-full gap-4 md:ml-0"
-          >
-            <button
-              type="submit"
-              className="bg-blue-500 w-12 justify-start h-12 rounded-full text-white"
+      <div
+        className={`fixed w-full top-0 z-20 transition-all duration-700 ${
+          scrolled ? "sm:bg-gray-900 bg-opacity-90" : "bg-transparent"
+        } ${scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"}`}
+      >
+        <div className="container max-w-screen-xl mx-auto py-2 px-2 sm:py-3 sm:px-4 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <Link to="/">
+              <img
+                src="https://ik.imagekit.io/thinhpx33/logo.png?updatedAt=1746706738519"
+                alt="logo"
+                className="w-12 h-12 sm:w-16 sm:h-16 object-cover ml-3"
+              />
+            </Link>
+          </div>
+
+          {/* Search Form */}
+          <div className="flex-1 mx-2 sm:mx-6">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center bg-gray-300 rounded-full px-2 sm:py-2"
             >
-              <i className="bx bx-search-alt"></i>
+              <button
+                type="submit"
+                className="bg-blue-500 w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-full text-white hover:bg-blue-600 transition-colors"
+              >
+                <i className="bx bx-search-alt text-lg sm:text-xl"></i>
+              </button>
+              <input
+                type="text"
+                name="keyword"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder="Tìm phim ở đây ..."
+                className="font-medium placeholder:text-gray-600 text-xs sm:text-sm w-full bg-transparent border-none px-2 text-black focus:outline-none"
+              />
+            </form>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="flex lg:hidden">
+            <button
+              onClick={toggleMobileMenu}
+              className="text-white p-2 rounded-full hover:bg-gray-700 transition-colors"
+            >
+              <i className={`bx bx-menu text-2xl ${isMobileMenuOpen ? "hidden" : "block"}`}></i>
+              <i className={`bx bx-x text-2xl ${isMobileMenuOpen ? "block" : "hidden"}`}></i>
             </button>
-            <input
-              type="text"
-              name="keyword"
-              placeholder="Tìm phim ở đây ..."
-              className="font-medium placeholder:text-gray-600 text-sm w-10/12 bg-transparent border-none px-2 text-black"
-            />
-          </form>
           </div>
-          <div className="col-span-5 font-medium text-sm gap-36 xl:gap-14 2xl:gap-20 justify-between lg:flex xl:justify-end items-center hidden">
-            <ul className="flex lg:gap-10 gap-4">
-              <li>
-                <Link
-                  to="/"
-                  className="text-white text-base font-medium hover:text-blue-400 relative transition-all group"
-                >
-                  <i className="bx bx-home-alt-2 mr-1"></i>Trang chủ
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/phim-le/1"
-                  className="text-white text-base font-medium hover:text-blue-400 transition-all group relative"
-                >
-                  <i className="bx bx-movie mr-1"></i>Phim lẻ
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link>
-              </li>
-              <li>
-                {/* <Link
-                  to="/category/phim-bo/1"
-                  className="text-white text-base font-medium hover:text-blue-400 transition-all group relative"
-                >
-                  <i className="bx bx-tv mr-1"></i>Phim bộ
-                  <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                  <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-                </Link> */}
-              </li>
-              <li>
-                <AboutNavbar />
-                
-              </li>
-              
-            </ul>
-          </div>
+
+          {/* Desktop Menu */}
+          <ul className="hidden lg:flex gap-8 font-medium text-sm items-center">
+            <li>
+              <Link
+                to="/"
+                className="text-white text-base font-medium hover:text-blue-400 relative transition-all group flex items-center"
+              >
+                <i className="bx bx-home-alt-2 mr-1"></i>Trang chủ
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/category/phim-le/1"
+                className="text-white text-base font-medium hover:text-blue-400 transition-all group relative flex items-center"
+              >
+                <i className="bx bx-movie mr-1"></i>Phim lẻ
+              </Link>
+            </li>
+            <li>
+              <AboutNavbar />
+            </li>
+          </ul>
+        </div>
+
+        {/* Mobile Menu */}
+        <div
+          className={`lg:hidden transition-all duration-300 ${
+            isMobileMenuOpen ? "block" : "hidden"
+          }`}
+        >
+          <ul className="flex flex-col items-center gap-4 bg-gray-900 bg-opacity-95 py-4">
+            <li>
+              <Link
+                to="/"
+                className="text-white text-base font-medium hover:text-blue-400 flex items-center"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <i className="bx bx-home-alt-2 mr-1"></i>Trang chủ
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/category/phim-le/1"
+                className="text-white text-base font-medium hover:text-blue-400 flex items-center"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <i className="bx bx-movie mr-1"></i>Phim lẻ
+              </Link>
+            </li>
+            <li>
+              <AboutNavbar />
+            </li>
+          </ul>
         </div>
       </div>
     </>

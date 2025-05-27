@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
-import { fetchDataFromAPI, fetchMovieDetails } from '../../../api/api.js';
-import { Link } from 'react-router-dom';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import 'react-lazy-load-image-component/src/effects/blur.css';
-import Slide from './Slide.jsx';
-import axios from 'axios';
-import { auth } from '../../Login/Firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { useState, useEffect, useRef } from "react";
+import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import { fetchDataFromAPI, fetchMovieDetails } from "../../../api/api.js";
+import { Link } from "react-router-dom";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
+import Slide from "./Slide.jsx";
+import Section from "../Section/Section.jsx";
+import axios from "axios";
+import { auth } from "../../Login/Firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 const Main = () => {
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,7 @@ const Main = () => {
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const scrollContainerRef = useRef(null);
+  const [actionMovies, setActionMovies] = useState([]); // Thêm state cho phim hành động
   const historyScrollRef = useRef(null);
 
   useEffect(() => {
@@ -90,12 +91,12 @@ const Main = () => {
             setSlug(movies[0].slug);
           }
         } else {
-          throw new Error('No items found in response');
+          throw new Error("No items found in response");
         }
       } catch (error) {
         if (isMounted) {
           setError(error.message);
-          console.error('Error fetching data:', error.message);
+          console.error("Error fetching data:", error.message);
         }
       } finally {
         if (isMounted) {
@@ -111,7 +112,24 @@ const Main = () => {
     };
   }, []);
 
-  // Preload ảnh sau khi có highlightMovies
+  // Fetch phim hành động
+  useEffect(() => {
+    const fetchActionMovies = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/movies/category/Hành Động", {
+          params: { limit: 10 },
+        });
+        console.log("API Response for Hành Động:", response.data); // Debug log
+        setActionMovies(response.data.data.items || []);
+      } catch (error) {
+        console.error("Error fetching Hành Động movies:", error);
+        setActionMovies([]);
+      }
+    };
+
+    fetchActionMovies();
+  }, []);
+
   useEffect(() => {
     if (highlightMovies.length > 0) {
       const preloadImages = () => {
@@ -135,31 +153,23 @@ const Main = () => {
         if (data && data.movie) {
           setMovie(data);
         } else {
-          throw new Error('No movie details found');
+          throw new Error("No movie details found");
         }
       } catch (error) {
         setError(error.message);
-        console.error('Error fetching movie details:', error.message);
+        console.error("Error fetching movie details:", error.message);
       }
     };
 
     getMovieDetails();
   }, [slug]);
 
-  const scrollLeft = () => {
-    scrollContainerRef.current.scrollBy({ left: -400, behavior: 'smooth' });
-  };
-
-  const scrollRight = () => {
-    scrollContainerRef.current.scrollBy({ left: 400, behavior: 'smooth' });
-  };
-
   const historyScrollLeft = () => {
-    historyScrollRef.current.scrollBy({ left: -400, behavior: 'smooth' });
+    historyScrollRef.current.scrollBy({ left: -400, behavior: "smooth" });
   };
 
   const historyScrollRight = () => {
-    historyScrollRef.current.scrollBy({ left: 400, behavior: 'smooth' });
+    historyScrollRef.current.scrollBy({ left: 400, behavior: "smooth" });
   };
 
   const toggleContent = () => {
@@ -234,7 +244,7 @@ const Main = () => {
         toggleContent={toggleContent}
       />
       {user && history.length > 0 && (
-        <div className="bg-[#06121e] h-auto sm:p-10 relative">
+        <div className="bg-[#0e1d2e] h-auto sm:p-10 relative">
           <div className="relative sm:rounded-lg sm:px-5 container max-w-screen-xl mx-auto">
             <div className="flex justify-between pt-5">
               <div className="inline-block">
@@ -257,7 +267,7 @@ const Main = () => {
               {history.map((entry, index) => (
                 <Link key={entry.slug} to={`/watch/${entry.slug}?t=${entry.stoppedAt}`}>
                   <div className="inline-block p-2 snap-start">
-                    <div className="relative rounded-lg shadow-lg group" style={{ willChange: 'transform, opacity' }}>
+                    <div className="relative rounded-lg shadow-lg group" style={{ willChange: "transform, opacity" }}>
                       <LazyLoadImage
                         effect="blur"
                         src={entry.posterUrl}
@@ -265,9 +275,13 @@ const Main = () => {
                         className="w-full h-80 md:w-[200px] md:h-80 object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105 backface-visibility-hidden"
                       />
                       {favorites.includes(entry.slug) && (
-                        <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded "><i class='bx bxs-heart' ></i></span>
+                        <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                          <i className="bx bxs-heart"></i>
+                        </span>
                       )}
-                      <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">HD</span>
+                      <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                        HD
+                      </span>
                       <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 rounded-lg">
                         <button className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors">
                           <i className="bx bx-play text-2xl"></i>
@@ -308,69 +322,24 @@ const Main = () => {
         </div>
       )}
 
+      {/* Section Phim Mới Cập Nhật */}
       {data.length > 0 && (
-        <div className="bg-[#06121e] h-auto sm:p-10 relative">
-          <div className="relative sm:rounded-lg sm:px-5 container max-w-screen-xl mx-auto">
-            <div className="flex justify-between pt-5">
-              <div className="inline-block">
-                <h1 className="text-lg md:text-2xl font-bold font-[Montserrat] sm:ml-5 relative bg-gradient-to-br from-[#ff8a00] to-[#ff2070] inline-block text-transparent bg-clip-text animate-gradient">
-                  PHIM MỚI CẬP NHẬT:
-                </h1>
-                <div className="w-full h-[1px] text-transparent bg-gradient-to-br from-[#ff8a00] to-[#ff2070] sm:ml-5"></div>
-              </div>
-            </div>
-            <button
-              onClick={scrollLeft}
-              className="hidden sm:block text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:scale-110 transition-transform duration-300 absolute -left-10 top-1/2 transform -translate-y-1/2 p-3 rounded-full shadow-lg z-10"
-            >
-              <i className="bx bx-chevron-left text-2xl"></i>
-            </button>
-            <div
-              ref={scrollContainerRef}
-              className="overflow-x-auto whitespace-nowrap py-4 no-scrollbar snap-mandatory snap-x"
-            >
-              {data.map((item, index) => (
-                <Link key={item.slug} to={`/detail/${item.slug}`}>
-                  <div className="inline-block p-2 snap-start">
-                    <div className="relative rounded-lg shadow-lg group" style={{ willChange: 'transform, opacity' }}>
-                      <LazyLoadImage
-                        effect="blur"
-                        src={item.poster_url}
-                        alt={item.name}
-                        className="w-full h-80 md:w-[200px] md:h-80 object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105 backface-visibility-hidden"
-                      />
-                      {favorites.includes(item.slug) && (
-                        <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded "><i class='bx bxs-heart' ></i></span>
-                      )}
-                      <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">HD</span>
-                      <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 rounded-lg">
-                        <button className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors">
-                          <i className="bx bx-play text-2xl"></i>
-                        </button>
-                        <h3 className="text-white text-sm font-medium text-center mt-2">{item.name}</h3>
-                        <p className="text-gray-300 text-xs mt-1">Năm: {item.year}</p>
-                      </div>
-                      <div className="sm:hidden block">
-                        <h1 className="text-2xl font-bold font-[Montserrat] italic bg-gradient-to-br from-[#fecf59] to-[#fff1cc] inline-block text-transparent bg-clip-text">
-                          {index + 1}
-                        </h1>
-                        <h1 className="max-w-40 text-xl font-[Montserrat] italic text-ellipsis overflow-hidden whitespace-nowrap font-bold inline-block text-white relative ml-1 top-2">
-                          {item.name}
-                        </h1>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <button
-              onClick={scrollRight}
-              className="hidden sm:block text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:scale-110 transition-transform duration-300 absolute -right-10 top-1/2 transform -translate-y-1/2 p-3 rounded-full shadow-lg z-10"
-            >
-              <i className="bx bx-chevron-right text-2xl"></i>
-            </button>
-          </div>
-        </div>
+        <Section
+          title="PHIM MỚI CẬP NHẬT:"
+          movies={data.slice(0, 10)}
+          link="/category/all/1"
+          favorites={favorites}
+        />
+      )}
+
+      {/* Section Phim Hành Động */}
+      {actionMovies.length > 0 && (
+        <Section
+          title="PHIM HÀNH ĐỘNG:"
+          movies={actionMovies} // Sử dụng state thay vì Promise
+          link="/category/Hành Động/1"
+          favorites={favorites}
+        />
       )}
     </>
   );

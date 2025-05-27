@@ -39,7 +39,7 @@ const checkAdmin = async (req, res, next) => {
 };
 
 // Thêm phim vào yêu thích
-router.post("/favorites", authenticate, async (req, res) => {
+router.post("/favorites", async (req, res) => {
   try {
     const { slug } = req.body;
     if (!slug) {
@@ -98,6 +98,7 @@ router.get("/favorites", authenticate, async (req, res) => {
   }
 });
 
+
 // Lưu lịch sử xem phim
 router.post("/history", authenticate, async (req, res) => {
   try {
@@ -112,6 +113,10 @@ router.post("/history", authenticate, async (req, res) => {
     let user = await User.findOne({ uid: req.user.uid });
     if (!user) {
       user = new User({ uid: req.user.uid, email: req.user.email, watchHistory: [] });
+    }
+    // Đảm bảo watchHistory luôn là mảng
+    if (!Array.isArray(user.watchHistory)) {
+      user.watchHistory = [];
     }
     const historyEntry = user.watchHistory.find(entry => entry.movie.equals(movie._id));
     if (historyEntry) {
@@ -136,17 +141,19 @@ router.post("/history", authenticate, async (req, res) => {
 router.get("/history", authenticate, async (req, res) => {
   try {
     const user = await User.findOne({ uid: req.user.uid }).populate('watchHistory.movie', 'slug name posterUrl time');
-    if (!user || !user.watchHistory.length) {
+    // Kiểm tra user và watchHistory kỹ hơn
+    if (!user || !user.watchHistory || !Array.isArray(user.watchHistory) || user.watchHistory.length === 0) {
       return res.json([]);
     }
     const history = user.watchHistory
+      .filter(entry => entry.movie !== null) // Bỏ qua các entry có movie là null
       .map(entry => ({
         slug: entry.movie.slug,
         name: entry.movie.name,
         posterUrl: entry.movie.posterUrl,
         stoppedAt: entry.stoppedAt,
         lastWatched: entry.lastWatched,
-        duration: parseDuration(entry.movie.time), // Chuyển đổi duration thành phút
+        duration: parseDuration(entry.movie.time),
       }))
       .sort((a, b) => b.lastWatched - a.lastWatched); // Sắp xếp theo thời gian xem gần nhất
     res.json(history);
@@ -155,6 +162,7 @@ router.get("/history", authenticate, async (req, res) => {
     res.status(500).json({ message: "Error fetching watch history", error: error.message });
   }
 });
+
 
 // Hàm hỗ trợ chuyển đổi duration thành phút
 function parseDuration(time) {
