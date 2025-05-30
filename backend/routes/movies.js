@@ -4,7 +4,6 @@ const Movie = require('../models/Movie');
 const User = require('../models/User');
 const admin = require('firebase-admin');
 
-// Middleware kiểm tra token
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) {
@@ -15,7 +14,7 @@ const authenticate = async (req, res, next) => {
     req.user = decodedToken;
     next();
   } catch (error) {
-    console.error("Token verification error:", error);
+    console.error('Token verification error:', error);
     if (error.code === 'auth/id-token-expired') {
       return res.status(401).json({ message: 'Token has expired, please log in again' });
     }
@@ -33,13 +32,88 @@ const checkAdmin = async (req, res, next) => {
       res.status(403).json({ message: 'Admin access required' });
     }
   } catch (error) {
-    console.error("Error checking admin status:", error);
+    console.error('Error checking admin status:', error);
     res.status(500).json({ message: 'Error checking admin status', error: error.message });
   }
 };
+router.post('/:slug/rating', authenticate, async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { rating, comment, displayName } = req.body;
+    const userId = req.user.uid;
 
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
+    const movie = await Movie.findOne({ slug });
+    if (!movie) {
+      return res.status(404).json({ message: 'Movie not found' });
+    }
+
+    const existingRating = movie.ratings.find((r) => r.userId === userId);
+    if (existingRating) {
+      existingRating.rating = rating;
+      existingRating.comment = comment || '';
+      existingRating.displayName = displayName || existingRating.displayName || userId; // Đảm bảo displayName được lưu
+      existingRating.createdAt = new Date();
+    } else {
+      movie.ratings.push({
+        userId,
+        rating,
+        comment: comment || '',
+        displayName: displayName || userId, // Lưu displayName
+      });
+    }
+
+    const totalRatings = movie.ratings.length;
+    const averageRating =
+      totalRatings > 0
+        ? movie.ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+        : 0;
+    movie.rating = Number(averageRating.toFixed(1));
+
+    await movie.save();
+    res.status(201).json({ message: 'Rating submitted successfully' });
+  } catch (error) {
+    console.error('Error submitting rating:', error);
+    res.status(500).json({ message: 'Error submitting rating', error: error.message });
+  }
+});
+
+router.delete('/:slug/rating/:userId', async (req, res) => {
+  try {
+    const { slug, userId } = req.params;
+
+    const movie = await Movie.findOne({ slug });
+    if (!movie) {
+      return res.status(404).json({ message: 'Movie not found' });
+    }
+
+    const ratingIndex = movie.ratings.findIndex((r) => r.userId === userId);
+    if (ratingIndex === -1) {
+      return res.status(404).json({ message: `Rating for user ${userId} not found` });
+    }
+
+    movie.ratings.splice(ratingIndex, 1); // Xóa đánh giá
+
+    // Cập nhật lại average rating
+    const totalRatings = movie.ratings.length;
+    const averageRating =
+      totalRatings > 0
+        ? movie.ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+        : 0;
+    movie.rating = Number(averageRating.toFixed(1));
+
+    await movie.save();
+    res.status(200).json({ message: 'Rating deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting rating:', error);
+    res.status(500).json({ message: 'Error deleting rating', error: error.message });
+  }
+});
 // Thêm phim vào yêu thích
-router.post("/favorites", async (req, res) => {
+router.post("/favorites", authenticate, async (req, res) => {
   try {
     const { slug } = req.body;
     if (!slug) {
@@ -52,6 +126,9 @@ router.post("/favorites", async (req, res) => {
     let user = await User.findOne({ uid: req.user.uid });
     if (!user) {
       user = new User({ uid: req.user.uid, email: req.user.email, favorites: [] });
+    }
+    if (!Array.isArray(user.favorites)) {
+      user.favorites = [];
     }
     if (!user.favorites.includes(movie._id)) {
       user.favorites.push(movie._id);
@@ -88,16 +165,16 @@ router.delete("/favorites/:slug", authenticate, async (req, res) => {
 router.get("/favorites", authenticate, async (req, res) => {
   try {
     const user = await User.findOne({ uid: req.user.uid }).populate('favorites', 'slug name posterUrl');
-    if (!user || !user.favorites.length) {
+    if (!user || !user.favorites || !Array.isArray(user.favorites) || user.favorites.length === 0) {
       return res.json([]);
     }
-    res.json(user.favorites);
+    const validFavorites = user.favorites.filter(movie => movie !== null);
+    res.json(validFavorites);
   } catch (error) {
     console.error("Error fetching favorites:", error);
     res.status(500).json({ message: "Error fetching favorites", error: error.message });
   }
 });
-
 
 // Lưu lịch sử xem phim
 router.post("/history", authenticate, async (req, res) => {
@@ -114,7 +191,6 @@ router.post("/history", authenticate, async (req, res) => {
     if (!user) {
       user = new User({ uid: req.user.uid, email: req.user.email, watchHistory: [] });
     }
-    // Đảm bảo watchHistory luôn là mảng
     if (!Array.isArray(user.watchHistory)) {
       user.watchHistory = [];
     }
@@ -141,12 +217,11 @@ router.post("/history", authenticate, async (req, res) => {
 router.get("/history", authenticate, async (req, res) => {
   try {
     const user = await User.findOne({ uid: req.user.uid }).populate('watchHistory.movie', 'slug name posterUrl time');
-    // Kiểm tra user và watchHistory kỹ hơn
     if (!user || !user.watchHistory || !Array.isArray(user.watchHistory) || user.watchHistory.length === 0) {
       return res.json([]);
     }
     const history = user.watchHistory
-      .filter(entry => entry.movie !== null) // Bỏ qua các entry có movie là null
+      .filter(entry => entry.movie !== null)
       .map(entry => ({
         slug: entry.movie.slug,
         name: entry.movie.name,
@@ -155,7 +230,7 @@ router.get("/history", authenticate, async (req, res) => {
         lastWatched: entry.lastWatched,
         duration: parseDuration(entry.movie.time),
       }))
-      .sort((a, b) => b.lastWatched - a.lastWatched); // Sắp xếp theo thời gian xem gần nhất
+      .sort((a, b) => b.lastWatched - a.lastWatched);
     res.json(history);
   } catch (error) {
     console.error("Error fetching watch history:", error);
@@ -163,31 +238,23 @@ router.get("/history", authenticate, async (req, res) => {
   }
 });
 
-
 // Hàm hỗ trợ chuyển đổi duration thành phút
 function parseDuration(time) {
   if (!time) return 0;
-
-  // Xử lý định dạng "119 phút"
   const minuteMatch = time.match(/^(\d+)\s*phút$/i);
   if (minuteMatch) {
     return parseInt(minuteMatch[1], 10) || 0;
   }
-
-  // Xử lý định dạng "2h 30m" hoặc "2h"
   if (time.includes("h")) {
     const hours = parseInt(time.split("h")[0]) || 0;
     const minutes = time.includes("m") ? parseInt(time.split("h")[1].split("m")[0]) || 0 : 0;
     return hours * 60 + minutes;
   }
-
-  // Xử lý định dạng "10 tập"
   if (time.includes("tập")) {
     const episodes = parseInt(time.split("tập")[0]) || 1;
-    return episodes * 45; // Giả định mỗi tập 45 phút
+    return episodes * 45;
   }
-
-  return 0; // Trả về 0 nếu không parse được
+  return 0;
 }
 
 // Lấy danh sách phim mới cập nhật
@@ -353,7 +420,6 @@ router.post('/admin/login', async (req, res) => {
   }
 });
 
-// Lấy chi tiết phim
 router.get('/:slug', async (req, res) => {
   try {
     const movie = await Movie.findOne({ slug: req.params.slug });
@@ -379,6 +445,7 @@ router.get('/:slug', async (req, res) => {
         content: movie.description,
         trailer_url: movie.trailerUrl,
         video_url: movie.videoUrl,
+        ratings: movie.ratings || [], // Thêm trường ratings
       },
     });
   } catch (error) {

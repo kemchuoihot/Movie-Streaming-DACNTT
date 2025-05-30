@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'boxicons/css/boxicons.min.css';
@@ -285,13 +285,13 @@ const Admin = () => {
           onClick={() => setActiveTab('users')}
           className={`block py-2 w-full text-left ${activeTab === 'users' ? 'bg-[#153a61]' : 'hover:bg-[#153a61]'} rounded`}
         >
-          <span className="text-yellow-500 mr-2">●</span> Người dùng
+          {activeTab === 'users'? <span className="text-yellow-500 mr-2">●</span> : null} Người dùng
         </button>
         <button
           onClick={() => setActiveTab('movies')}
           className={`block py-2 w-full text-left ${activeTab === 'movies' ? 'bg-[#153a61]' : 'hover:bg-[#153a61]'} rounded`}
         >
-          <span className="text-yellow-500 mr-2">●</span> Phim
+          {activeTab === 'movies' ? <span className="text-yellow-500 mr-2">●</span> : null} Phim
         </button>
         <button
           onClick={handleLogout}
@@ -301,7 +301,12 @@ const Admin = () => {
         </button>
       </div>
       <div className="flex-1 p-8 ml-64">
-        <div className="bg-[#0e274073] text-white rounded-md shadow-md p-5">
+        <Link
+              to="/"
+              className=" bx bx-home absolute top-4 right-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline z-10"
+            >
+        </Link>
+        <div className="bg-[#0e274073] text-white rounded-md shadow-md p-5 mt-5">
           <h2 className="text-xl font-semibold mb-4">
             {activeTab === 'users' ? 'Quản lý người dùng' : 'Quản lý phim'}
           </h2>
@@ -350,9 +355,9 @@ const Admin = () => {
                 <table className="w-full text-white">
                   <thead>
                     <tr className="bg-[#153a61]">
-                      <th className="p-2">Email</th>
-                      <th className="p-2">Admin</th>
-                      <th className="p-2">Hành động</th>
+                      <th className="p-2 text-left">Email</th>
+                      <th className="p-2 text-left">Admin</th>
+                      <th className="p-2 text-left">Hành động</th>
                     </tr>
                   </thead>
                   <tbody>

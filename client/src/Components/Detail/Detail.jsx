@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import "boxicons/css/boxicons.min.css";
 import { fetchMovieDetails } from "../../api/api";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
 import Footer from "../Footer/Footer";
-import { auth } from '../Login/Firebase';
+import { auth } from "../Login/Firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import axios from "axios";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"
+import "react-toastify/dist/ReactToastify.css";
 import NavBar from "../Layout/Navbar/NavBar";
 
 const Detail = () => {
@@ -25,6 +25,9 @@ const Detail = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteError, setFavoriteError] = useState("");
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
+  const [userDisplayName, setUserDisplayName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,7 +37,20 @@ const Detail = () => {
         try {
           const token = await user.getIdToken();
           localStorage.setItem("authToken", token);
+          console.log("User is logged in:", user.displayName || user.email);
+          console.log("User ID:", user.uid);
+          let displayName = user.displayName || user.email || "Người dùng";
+          if (!user.displayName) {
+            const newDisplayName = prompt("Vui lòng nhập tên hiển thị của bạn:");
+            if (newDisplayName) {
+              displayName = newDisplayName;
+              await auth.currentUser.updateProfile({ displayName: newDisplayName });
+            }
+          }
+          setUserDisplayName(displayName);
+          setIsAdmin(user.email === "admin@moviecity.com");
           checkFavorite(user);
+          fetchUserRating(user.uid);
         } catch (err) {
           console.error("Error getting token:", err);
           setIsLoggedIn(false);
@@ -44,10 +60,43 @@ const Detail = () => {
         setIsLoggedIn(false);
         localStorage.removeItem("authToken");
         setIsFavorite(false);
+        setHasRated(false);
+        setUserDisplayName("");
+        setIsAdmin(false);
       }
     });
     return () => unsubscribe();
   }, [navigate]);
+
+  const fetchUserRating = async (userId) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/movies/${slug}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+      });
+      console.log('Fetched movie data:', response.data); // Log để debug
+      const movie = response.data.movie;
+      setFilm({ movie }); // Cập nhật film để hiển thị ratings
+      const ratings = movie.ratings || [];
+      const userRating = ratings.find((r) => r.userId === userId);
+      if (userRating) {
+        setRating(userRating.rating);
+        setComment(userRating.comment || "");
+        setHasRated(true);
+      } else {
+        setHasRated(false);
+      }
+      const averageRating =
+        ratings.length > 0
+          ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
+          : 0;
+      setFilm((prevFilm) => ({
+        ...prevFilm,
+        movie: { ...prevFilm.movie, tmdb: { vote_average: averageRating } },
+      }));
+    } catch (err) {
+      console.error("Error fetching user rating:", err);
+    }
+  };
 
   const checkFavorite = async (user) => {
     try {
@@ -86,23 +135,31 @@ const Detail = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) {
-      alert("Vui lòng chọn số sao!");
+      toast.error("Vui lòng chọn số sao!");
       return;
     }
     try {
-      await axios.post(`http://localhost:5000/api/movies/${slug}/rating`, {
-        rating,
-        comment,
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-      });
+      await axios.post(
+        `http://localhost:5000/api/movies/${slug}/rating`,
+        {
+          rating,
+          comment,
+          displayName: userDisplayName,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+        }
+      );
+      toast.success("Đánh giá của bạn đã được gửi!");
       setSubmitted(true);
-      setComment("");
-      setRating(0);
+      setHasRated(true);
+      fetchUserRating(auth.currentUser.uid); // Cập nhật lại danh sách bình luận
       setTimeout(() => setSubmitted(false), 3000);
     } catch (error) {
       console.error("Failed to submit rating:", error);
-      alert("Failed to submit rating. Please try again.");
+      toast.error(
+        error.response?.data?.message || "Không thể gửi đánh giá. Vui lòng thử lại."
+      );
     }
   };
 
@@ -118,13 +175,15 @@ const Detail = () => {
       if (!token) {
         throw new Error("No auth token found");
       }
-      console.log("Toggling favorite, slug:", slug, "Token:", token.slice(0, 10) + "...");
       if (isFavorite) {
-        const response = await axios.delete(`http://localhost:5000/api/movies/favorites/${slug}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log("Remove favorite response:", response.data);
+        const response = await axios.delete(
+          `http://localhost:5000/api/movies/favorites/${slug}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setIsFavorite(false);
+        toast.success("Xóa khỏi yêu thích!");
       } else {
         const response = await axios.post(
           "http://localhost:5000/api/movies/favorites",
@@ -133,9 +192,8 @@ const Detail = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log("Add favorite response:", response.data);
-        toast.success(isFavorite ? "Xóa khỏi yêu thích!" : "Thêm vào yêu thích!")
         setIsFavorite(true);
+        toast.success("Thêm vào yêu thích!");
       }
     } catch (err) {
       console.error("Error toggling favorite:", err);
@@ -148,14 +206,30 @@ const Detail = () => {
     }
   };
 
+  const handleDeleteRating = async (userId) => {
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền xóa bình luận!");
+      return;
+    }
+    try {
+      await axios.delete(`http://localhost:5000/api/movies/${slug}/rating/${userId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+      });
+      toast.success("Bình luận đã được xóa!");
+      fetchUserRating(auth.currentUser.uid); // Cập nhật lại danh sách bình luận
+    } catch (error) {
+      console.error("Error deleting rating:", error);
+      toast.error("Không thể xóa bình luận. Vui lòng thử lại.");
+    }
+  };
+
   if (!film) {
     return <div className="min-h-screen bg-[#06121e] text-white">Loading...</div>;
   }
 
   return (
     <>
-      <NavBar/>
-      
+      <NavBar />
       <div
         style={{ backgroundImage: `url(${film.movie.thumb_url})` }}
         className="h-[530px] bg-cover bg-center relative"
@@ -184,76 +258,104 @@ const Detail = () => {
               onClick={handleToggleFavorite}
               disabled={isFavoriteLoading}
               className={`w-full mt-2 py-2 rounded-lg text-white font-semibold transition-colors ${
-                isFavorite ? "bg-red-600 hover:bg-red-700" : "bg-indigo-600 hover:bg-indigo-700"
+                isFavorite
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-indigo-600 hover:bg-indigo-700"
               } ${isFavoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {isFavoriteLoading ? (
                 "Loading..."
               ) : (
                 <>
-                  <i className={`bx ${isFavorite ? "bx-heart" : "bxs-heart"} mr-2`}></i>
+                  <i
+                    className={`bx ${
+                      isFavorite ? "bx-heart" : "bxs-heart"
+                    } mr-2`}
+                  ></i>
                   {isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
                 </>
               )}
             </button>
-            {favoriteError && <p className="text-red-500 mt-2 text-center">{favoriteError}</p>}
+            {favoriteError && (
+              <p className="text-red-500 mt-2 text-center">{favoriteError}</p>
+            )}
             <div className="mt-4">
               {isLoggedIn ? (
                 <>
+                  {hasRated ? (
+                    <div className="text-white text-center mb-4">
+                      Bạn đã đánh giá phim này: {rating} sao{" "}
+                      {comment && (
+                        <>
+                          - "{comment}"
+                          <button
+                            onClick={() => setHasRated(false)}
+                            className="ml-2 text-indigo-500 hover:underline"
+                          >
+                            Sửa đánh giá
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    !submitted && (
+                      <div className="flex flex-col items-center">
+                        <div className="flex justify-center space-x-2 mb-4">
+                          {[...Array(5)].map((_, i) => {
+                            const ratingValue = i + 1;
+                            return (
+                              <label key={i}>
+                                <input
+                                  type="radio"
+                                  name="rating"
+                                  value={ratingValue}
+                                  className="hidden"
+                                  onChange={() => setRating(ratingValue)}
+                                />
+                                <i
+                                  className="bx bxs-star cursor-pointer text-3xl transition-colors duration-200"
+                                  style={{
+                                    color:
+                                      ratingValue <= (hover || rating)
+                                        ? "#ffc107"
+                                        : "#e4e5e9",
+                                  }}
+                                  onMouseEnter={() => setHover(ratingValue)}
+                                  onMouseLeave={() => setHover(null)}
+                                ></i>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <form onSubmit={handleSubmit} className="w-full max-w-md">
+                          <textarea
+                            className="w-full h-24 p-2 bg-gray-800 text-white rounded-lg resize-none focus:ring-2 focus:ring-indigo-600"
+                            placeholder="Describe your experience..."
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                          ></textarea>
+                          <button
+                            type="submit"
+                            className="mt-2 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                          >
+                            Post
+                          </button>
+                        </form>
+                      </div>
+                    )
+                  )}
                   {submitted && (
                     <div className="text-white text-center mb-4">
                       Thanks for your feedback!
                     </div>
                   )}
-                  {!submitted && (
-                    <div className="flex flex-col items-center">
-                      <div className="flex justify-center space-x-2 mb-4">
-                        {[...Array(5)].map((_, i) => {
-                          const ratingValue = i + 1;
-                          return (
-                            <label key={i}>
-                              <input
-                                type="radio"
-                                name="rating"
-                                value={ratingValue}
-                                className="hidden"
-                                onChange={() => setRating(ratingValue)}
-                              />
-                              <i
-                                className="bx bxs-star cursor-pointer text-3xl transition-colors duration-200"
-                                style={{
-                                  color: ratingValue <= (hover || rating) ? "#ffc107" : "#e4e5e9",
-                                }}
-                                onMouseEnter={() => setHover(ratingValue)}
-                                onMouseLeave={() => setHover(null)}
-                              ></i>
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <form onSubmit={handleSubmit} className="w-full max-w-md">
-                        <textarea
-                          className="w-full h-24 p-2 bg-gray-800 text-white rounded-lg resize-none focus:ring-2 focus:ring-indigo-600"
-                          placeholder="Describe your experience..."
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
-                        ></textarea>
-                        <button
-                          type="submit"
-                          className="mt-2 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                        >
-                          Post
-                        </button>
-                      </form>
-                    </div>
-                  )}
                 </>
               ) : (
                 <div className="text-white text-center mt-4">
-                  Please{' '}
+                  Please{" "}
                   <Link to="/login" className="text-indigo-500 hover:underline">
                     log in
-                  </Link>{' '}
+                  </Link>{" "}
                   to rate this film.
                 </div>
               )}
@@ -301,6 +403,54 @@ const Detail = () => {
                 ></iframe>
               </div>
             </div>
+            {/* Phần hiển thị danh sách đánh giá và bình luận */}
+            {film.movie.ratings && film.movie.ratings.length > 0 && (
+              <div className="mt-10">
+                <h2 className="text-2xl text-white font-bold mb-4">
+                  Đánh giá và Bình luận
+                </h2>
+                {film.movie.ratings.map((rating, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-800 p-4 rounded-lg mb-4 text-white relative"
+                  >
+                    <p>
+                      <strong>Tên người dùng:</strong>{" "}
+                      {rating.displayName || "Người dùng ẩn danh"}
+                    </p>
+                    <p>
+                      <strong>Rating:</strong>{" "}
+                      {[...Array(5)].map((_, i) => (
+                        <i
+                          key={i}
+                          className="bx bxs-star text-xl"
+                          style={{
+                            color: i < rating.rating ? "#ffc107" : "#e4e5e9",
+                          }}
+                        ></i>
+                      ))}
+                    </p>
+                    {rating.comment && (
+                      <p>
+                        <strong>Bình luận:</strong> {rating.comment}
+                      </p>
+                    )}
+                    <p>
+                      <strong>Thời gian:</strong>{" "}
+                      {new Date(rating.createdAt).toLocaleString()}
+                    </p>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteRating(rating.userId)}
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                      >
+                        <i className="bx bx-trash"></i>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
