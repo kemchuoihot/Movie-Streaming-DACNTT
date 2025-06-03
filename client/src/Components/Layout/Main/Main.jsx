@@ -22,6 +22,7 @@ const Main = () => {
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [dramaMovies, setDramaMovies] = useState([]); // Thêm state cho phim chính kịch
   const [actionMovies, setActionMovies] = useState([]); // Thêm state cho phim hành động
   const historyScrollRef = useRef(null);
 
@@ -128,6 +129,22 @@ const Main = () => {
     };
 
     fetchActionMovies();
+  }, []);
+  useEffect(() => {
+    const fetchDramaMovies = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/movies/category/Chính Kịch", {
+          params: { limit: 10 },
+        });
+        console.log("API Response for Chính Kịch:", response.data); // Debug log
+        setDramaMovies(response.data.data.items || []);
+      } catch (error) {
+        console.error("Error fetching Chính Kịch movies:", error);
+        setDramaMovies([]);
+      }
+    };
+
+    fetchDramaMovies();
   }, []);
 
   useEffect(() => {
@@ -338,6 +355,14 @@ const Main = () => {
           title="PHIM HÀNH ĐỘNG:"
           movies={actionMovies} // Sử dụng state thay vì Promise
           link="/category/Hành Động/1"
+          favorites={favorites}
+        />
+      )}
+      {dramaMovies.length > 0 && (
+        <Section
+          title="PHIM CHÍNH KỊCH:"
+          movies={dramaMovies} // Sử dụng state thay vì Promise
+          link="/category/Chính Kịch/1"
           favorites={favorites}
         />
       )}

@@ -1,219 +1,133 @@
-// import React, { useEffect, useState } from "react";
-// import { useParams, Link, useNavigate } from "react-router-dom";
-// import "boxicons/css/boxicons.min.css";
-// import { fetchMovieByCategory } from "../../api/api"; // Import fetchMovieByCategory
-// import { LazyLoadImage } from "react-lazy-load-image-component";
-// import "react-lazy-load-image-component/src/effects/blur.css";
-// import Footer from "../Footer/Footer";
+import React, { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
+import axios from "axios";
+import NavBar from "../Layout/Navbar/NavBar";
+import Footer from "../Footer/Footer";
 
+const getTitle = (category) => {
+  if (category === "all") return "Phim Mới Cập Nhật";
+  return `Danh mục: ${category}`;
+};
 
-// const Category = () => {
-//   const { category, page } = useParams();
-//   const navigate = useNavigate();
-//   const [data, setData] = useState([]);
-//   const [error, setError] = useState(null);
-//   const [title, setTitle] = useState(null);
-//   const [scrolled, setScrolled] = useState(false);
-//   const [currentPage, setCurrentPage] = useState(parseInt(page) || 1);
-//   const [totalPages, setTotalPages] = useState(1); // Giả sử bạn có tổng số trang từ API
-//   const [loading, setLoading] = useState(true); // Thêm trạng thái loading
+const CategoryPage = () => {
+  const { category, page } = useParams();
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-//   useEffect(() => {
-//     const fetchFilm = async () => {
-//       setLoading(true); // Bắt đầu loading
-//       try {
-//         const response = await fetchMovieByCategory(category, currentPage);
-//         if (response && response.data.items) {
-//           setData(response.data.items);
-//           setTitle(response.data.titlePage);
-//           setTotalPages(response.data.params.pagination.totalItems); // Giả sử API trả về tổng số trang
-//         } else {
-//           setError("No items found in response");
-//         }
-//         // console.log(response);
-//       } catch (error) {
-//         console.error("Failed to fetch film:", error);
-//       } finally {
-//         setLoading(false); // Kết thúc loading
-//       }
-//     };
+  useEffect(() => {
+    const fetchCategoryMovies = async () => {
+      setLoading(true);
+      try {
+        let url = "";
+        if (category === "all") {
+          url = "http://localhost:5000/api/movies/new";
+        } else {
+          url = `http://localhost:5000/api/movies/category/${category}`;
+        }
+        const res = await axios.get(url, {
+          params: { page: page || 1, limit: 18 },
+        });
+        setMovies(
+          res.data.items || (res.data.data && res.data.data.items) || []
+        );
+      } catch (err) {
+        setMovies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategoryMovies();
+  }, [category, page]);
 
-//     fetchFilm();
-//   }, [category, currentPage]);
+  return (
+    <>
+      <NavBar />
+      <div className="min-h-screen w-full bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364] relative animate-fadeIn">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-12">
+          <div className="flex flex-col items-center mb-10">
+            <h1 className="text-3xl mt-20 sm:text-4xl font-extrabold font-[Montserrat] text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 tracking-tight drop-shadow-lg neon-text uppercase">
+              {getTitle(category)}
+            </h1>
+            <div className="w-24 h-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mt-4 animate-pulse" />
+          </div>
+          {loading ? (
+            <div className="flex justify-center items-center min-h-[300px]">
+              <div className="w-40 h-40 border-8 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : movies.length === 0 ? (
+            <div className="bg-[#182c3a]/80 px-8 py-6 rounded-2xl shadow-2xl text-white text-lg font-semibold backdrop-blur-md text-center">
+              Không có phim nào.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+              {movies.map((item, idx) => (
+                <Link
+                  key={item.slug}
+                  to={`/detail/${item.slug}`}
+                  className="group relative rounded-lg overflow-hidden shadow-lg bg-[#1a2a3a]/80 hover:shadow-2xl transition-all duration-300 will-change-transform"
+                  style={{ backfaceVisibility: "hidden" }}
+                >
+                  <div className="relative h-80 md:h-80">
+                    <LazyLoadImage
+                      effect="blur"
+                      src={item.poster_url || item.thumb_url}
+                      alt={item.name}
+                      className="w-full aspect-[2/3] object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105 backface-visibility-hidden"
+                    />
+                    <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                      <i className="bx bxs-heart"></i>
+                    </span>
+                    <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                      HD
+                    </span>
+                    <span className="absolute bottom-2 left-2 bg-gradient-to-br from-yellow-400 to-orange-500 text-[#1a2a3a] text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                      {item.year}
+                    </span>
+                    <p className="absolute bottom-2 right-2 bg-gradient-to-br from-yellow-400 to-orange-500 text-[#1a2a3a] text-xs font-bold px-2 py-1 rounded-full shadow-md">{item.time || "--"}</p>
 
-//   useEffect(() => {
-//     const handleScroll = () => {
-//       if (window.scrollY > 50) {
-//         setScrolled(true);
-//       } else {
-//         setScrolled(false);
-//       }
-//     };
+                    <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 rounded-lg">
+                      <button className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors">
+                        <i className="bx bx-play text-2xl"></i>
+                      </button>
+                      <h3 className="text-white text-sm font-medium text-center mt-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-gray-300 text-xs mt-1">
+                        Năm: {item.year}
+                      </p>
+                    </div>
+                    <div className="sm:hidden block absolute bottom-2 left-2">
+                      <h1 className="text-2xl font-bold font-[Montserrat] italic bg-gradient-to-br from-[#fecf59] to-[#fff1cc] inline-block text-transparent bg-clip-text">
+                        {idx + 1}
+                      </h1>
+                      <h1 className="max-w-40 text-xl font-[Montserrat] italic text-ellipsis overflow-hidden whitespace-nowrap font-bold inline-block text-white relative ml-1 top-2">
+                        {item.name}
+                      </h1>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <h3 className="text-white text-base font-bold truncate">
+                      {item.name}
+                    </h3>
+                    <p className="text-gray-400 text-xs italic truncate">
+                      {item.original_name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-300">
+                      <span>•</span>
+                      <div>{item.genre || "--"}</div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <Footer />
+    </>
+  );
+};
 
-//     window.addEventListener("scroll", handleScroll);
-
-//     return () => {
-//       window.removeEventListener("scroll", handleScroll);
-//     };
-//   }, []);
-
-//   const handleNextPage = () => {
-//     const nextPage = currentPage + 1;
-//     setCurrentPage(nextPage);
-//     navigate(`/category/${category}/${nextPage}`);
-//   };
-
-//   const handlePreviousPage = () => {
-//     const prevPage = currentPage - 1;
-//     if (prevPage > 0) {
-//       setCurrentPage(prevPage);
-//       navigate(`/category/${category}/${prevPage}`);
-//     }
-//   };
-
-//   const handlePageClick = (pageNumber) => {
-//     setCurrentPage(pageNumber);
-//     navigate(`/category/${category}/${pageNumber}`);
-//   };
-
-//   const renderPageNumbers = () => {
-//     const pageNumbers = [];
-//     for (let i = currentPage; i <= Math.min(currentPage + 2, totalPages); i++) {
-//       pageNumbers.push(
-//         <button
-//           key={i}
-//           onClick={() => handlePageClick(i)}
-//           className={`px-4 py-2 m-2 rounded-lg ${
-//             i === currentPage ? "bg-[#ff8a00] text-white" : "bg-gray-200 text-black"
-//           }`}
-//         >
-//           {i}
-//         </button>
-//       );
-//     }
-//     return pageNumbers;
-//   };
-
-//   if (loading) {
-//     return <div className="h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>;
-//   }
-
-//   return (
-//     <>
-//       <header
-//         className={`fixed top-0 left-0 w-full z-20 transition-all duration-500 ${
-//           scrolled ? "bg-gray-900 bg-opacity-90" : "bg-transparent"
-//         }`}
-//       >
-//         <div className="container max-w-screen-xl mx-auto py-4 px-4 flex justify-between items-center">
-//           <div className="flex items-center">
-//             <ul className="flex space-x-4 pt-5">
-//               <li>
-//                 <Link
-//                   to="/"
-//                   className="text-white text-lg font-bold hover:text-gray-400"
-//                 >
-//                   <img
-//                     src="https://seeklogo.com/images/M/movie-city-hd-logo-D25A7AC34A-seeklogo.com.png"
-//                     alt="logo"
-//                     className="w-20  mr-4"
-//                   />
-//                 </Link>
-//               </li>
-//             </ul>
-//           </div>
-//           <div className="col-span-3 font-medium text-sm gap-36 xl:gap-14 2xl:gap-20 justify-between lg:flex xl:justify-end items-center hidden">
-//             <ul className="flex lg:gap-10 gap-4">
-//             <li>
-//                 <Link to="/" className="text-white text-base font-medium hover:text-blue-400 relative transition-all group">
-//                   <i className='bx bx-home-alt-2 mr-1'></i>Trang chủ
-//                   <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                   <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                 </Link>
-//               </li>
-//               <li>
-//                 <Link to="/category/phim-le/1" className="text-white text-base font-medium hover:text-blue-400 transition-all group relative">
-//                   <i className='bx bx-movie mr-1'></i>Phim lẻ
-//                   <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                   <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                 </Link>
-//               </li>
-//               <li>
-//                 <Link to="/category/phim-bo/1" className="text-white text-base font-medium hover:text-blue-400 transition-all group relative">
-//                   <i className='bx bx-tv mr-1'></i>Phim bộ
-//                   <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                   <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                 </Link>
-//               </li>
-//               <li>
-//                 <Link to="/about" className="text-white text-base font-medium hover:text-blue-400 transition-all group relative">
-//                   <i className='bx bx-user mr-1'></i>About
-//                   <span className="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                   <span className="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-indigo-600 group-hover:w-3/6"></span>
-//                 </Link>
-//               </li>
-//             </ul>
-//           </div>
-//         </div>
-//       </header>
-//       <div className="bg-[#06121e] h-auto py-20 relative ">
-//       <div className="relative bg-[#0e274073] sm:rounded-lg sm:px-5 container max-w-screen-xl mx-auto w-full">
-//         <div className="flex justify-between pt-5 pb-4">
-//           <div className="inline-block">
-//             <h1 className="text-lg md:text-2xl font-bold font-[Montserrat] md:ml-5 relative bg-gradient-to-br from-[#ff8a00] to-[#ff2070] inline-block text-transparent bg-clip-text">
-//               {title}
-//             </h1>
-//             <div className="w-full h-[1px] text-transparent bg-gradient-to-br from-[#ff8a00] to-[#ff2070] md:ml-5"></div>
-//           </div>
-          
-//         </div>
-//         <div className="grid gap-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4 ">
-//           {data.length > 0 ? (
-//             data.map((item) => (
-//               <Link to={`/detail/${item.slug}`} key={item.id} className="mx-auto">
-//                 <div className="inline-block md:p-3 transform transition-transform duration-300 hover:scale-105 snap-start md:mx-2 hoathinh md:min-h-80 ">
-//                   <div className="md:rounded-lg shadow-lg">
-//                     <LazyLoadImage
-//                       effect="blur"
-//                       src={`https://phimimg.com/${item.poster_url}`}
-//                       alt="poster"
-//                       className="w-full h-80 sm:h-64 md:min-w-[184px] md:h-72 object-cover md:rounded hover:shadow-lg transition duration-300 "
-//                     />
-//                   </div>
-//                   <h3 className="max-w-[120px] sm:max-w-[150px] md:max-w-[184px] inline-block text-ellipsis overflow-hidden whitespace-nowrap text-[#dbdbdb]">
-//                     {item.name}
-//                   </h3>
-//                   <h4 className="max-w-[120px] sm:max-w-[150px] md:max-w-[184px] text-ellipsis overflow-hidden whitespace-nowrap text-[#7a7a7a] text-xs">
-//                     {item.origin_name}
-//                   </h4>
-//                 </div>
-//               </Link>
-//             ))
-//           ) : (
-//             <div>Loading</div>
-//           )}
-//         </div>
-//         <div className="flex justify-center mt-10">
-//             <button
-//               onClick={handlePreviousPage}
-//               className="bg-[#ff8a00] text-white px-4 py-2 m-2 rounded-lg"
-//               disabled={currentPage === 1}
-//             >
-//               Previous
-//             </button>
-//             {renderPageNumbers()}
-//             <button
-//               onClick={handleNextPage}
-//               className="bg-[#ff8a00] text-white px-4 py-2 m-2 rounded-lg"
-//             >
-//               Next
-//             </button>
-//           </div>
-//       </div>
-//     </div>
-//       <Footer />
-//     </>
-//   );
-// };
-
-// export default Category;
+export default CategoryPage;
