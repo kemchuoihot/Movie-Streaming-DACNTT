@@ -24,6 +24,7 @@ const Main = () => {
   const [favorites, setFavorites] = useState([]);
   const [dramaMovies, setDramaMovies] = useState([]); // Thêm state cho phim chính kịch
   const [actionMovies, setActionMovies] = useState([]); // Thêm state cho phim hành động
+  const [psychologicalMovies, setPsychologicalMovies] = useState([]); // Thêm state cho phim tâm lý
   const historyScrollRef = useRef(null);
 
   useEffect(() => {
@@ -48,9 +49,12 @@ const Main = () => {
 
   const fetchHistory = async (token) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/movies/history", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "http://localhost:5000/api/movies/history",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setHistory(response.data || []);
     } catch (err) {
       console.error("Error fetching watch history:", err);
@@ -60,9 +64,12 @@ const Main = () => {
 
   const fetchFavorites = async (token) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/movies/favorites", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "http://localhost:5000/api/movies/favorites",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setFavorites(response.data.map((item) => item.slug) || []);
     } catch (err) {
       console.error("Error fetching favorites:", err);
@@ -117,9 +124,12 @@ const Main = () => {
   useEffect(() => {
     const fetchActionMovies = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/movies/category/Hành Động", {
-          params: { limit: 10 },
-        });
+        const response = await axios.get(
+          "http://localhost:5000/api/movies/category/Hành Động",
+          {
+            params: { limit: 10 },
+          }
+        );
         console.log("API Response for Hành Động:", response.data); // Debug log
         setActionMovies(response.data.data.items || []);
       } catch (error) {
@@ -133,9 +143,12 @@ const Main = () => {
   useEffect(() => {
     const fetchDramaMovies = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/movies/category/Chính Kịch", {
-          params: { limit: 10 },
-        });
+        const response = await axios.get(
+          "http://localhost:5000/api/movies/category/Chính Kịch",
+          {
+            params: { limit: 10 },
+          }
+        );
         console.log("API Response for Chính Kịch:", response.data); // Debug log
         setDramaMovies(response.data.data.items || []);
       } catch (error) {
@@ -145,6 +158,27 @@ const Main = () => {
     };
 
     fetchDramaMovies();
+  }, []);
+
+  //Fetch phim Tâm lý
+  useEffect(() => {
+    const fetchPsychologicalMovies = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/api/movies/category/Tâm Lý",
+          {
+            params: { limit: 10 },
+          }
+        );
+        console.log("API Response for Tâm Lý:", response.data); // Debug log
+        setPsychologicalMovies(response.data.data.items || []);
+      } catch (error) {
+        console.error("Error fetching Tâm Lý movies:", error);
+        setPsychologicalMovies([]);
+      }
+    };
+
+    fetchPsychologicalMovies();
   }, []);
 
   useEffect(() => {
@@ -195,7 +229,8 @@ const Main = () => {
 
   const getProgressPercentage = (stoppedAt, duration) => {
     if (!stoppedAt || !duration) return 0;
-    const totalMins = typeof duration === "number" ? duration : parseDuration(duration);
+    const totalMins =
+      typeof duration === "number" ? duration : parseDuration(duration);
     return Math.min((stoppedAt / totalMins) * 100, 100);
   };
 
@@ -208,7 +243,9 @@ const Main = () => {
     }
     if (time.includes("h")) {
       const hours = parseInt(time.split("h")[0]) || 0;
-      const minutes = time.includes("m") ? parseInt(time.split("h")[1].split("m")[0]) || 0 : 0;
+      const minutes = time.includes("m")
+        ? parseInt(time.split("h")[1].split("m")[0]) || 0
+        : 0;
       return hours * 60 + minutes;
     }
     if (time.includes("tập")) {
@@ -235,9 +272,7 @@ const Main = () => {
               />
             </div>
             <div className="relative w-1/2 mx-auto flex justify-center">
-              <Skeleton
-                className="rounded-lg mx-auto !h-[250px] !w-[150px] md:!h-[400px] md:!w-[300px] lg:!h-[530px] lg:!w-[400px]"
-              />
+              <Skeleton className="rounded-lg mx-auto !h-[250px] !w-[150px] md:!h-[400px] md:!w-[300px] lg:!h-[530px] lg:!w-[400px]" />
             </div>
           </div>
         </div>
@@ -282,9 +317,15 @@ const Main = () => {
               className="overflow-x-auto whitespace-nowrap py-4 no-scrollbar snap-mandatory snap-x"
             >
               {history.map((entry, index) => (
-                <Link key={entry.slug} to={`/watch/${entry.slug}?t=${entry.stoppedAt}`}>
+                <Link
+                  key={entry.slug}
+                  to={`/watch/${entry.slug}?t=${entry.stoppedAt}`}
+                >
                   <div className="inline-block p-2 snap-start">
-                    <div className="relative rounded-lg shadow-lg group" style={{ willChange: "transform, opacity" }}>
+                    <div
+                      className="relative rounded-lg shadow-lg group"
+                      style={{ willChange: "transform, opacity" }}
+                    >
                       <LazyLoadImage
                         effect="blur"
                         src={entry.posterUrl}
@@ -303,16 +344,30 @@ const Main = () => {
                         <button className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors">
                           <i className="bx bx-play text-2xl"></i>
                         </button>
-                        <h3 className="text-white text-sm font-medium text-center mt-2">{entry.name}</h3>
+                        <h3 className="text-white text-sm font-medium text-center mt-2">
+                          {entry.name}
+                        </h3>
                         <p className="text-gray-300 text-xs mt-1">
-                          Đã xem: {Math.round(getProgressPercentage(entry.stoppedAt, entry.duration))}%
+                          Đã xem:{" "}
+                          {Math.round(
+                            getProgressPercentage(
+                              entry.stoppedAt,
+                              entry.duration
+                            )
+                          )}
+                          %
                         </p>
                       </div>
                       <div className="absolute bottom-0 left-0 w-full px-2">
                         <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
                           <div
                             className="bg-gradient-to-r from-red-500 to-pink-500 h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: `${getProgressPercentage(entry.stoppedAt, entry.duration)}%` }}
+                            style={{
+                              width: `${getProgressPercentage(
+                                entry.stoppedAt,
+                                entry.duration
+                              )}%`,
+                            }}
                           ></div>
                         </div>
                       </div>
@@ -339,31 +394,42 @@ const Main = () => {
         </div>
       )}
 
-      {/* Section Phim Mới Cập Nhật */}
       {data.length > 0 && (
         <Section
           title="PHIM MỚI CẬP NHẬT:"
           movies={data.slice(0, 10)}
           link="/category/all/1"
           favorites={favorites}
+          layout="horizontal" // Đặt layout ngang
         />
       )}
 
-      {/* Section Phim Hành Động */}
       {actionMovies.length > 0 && (
         <Section
           title="PHIM HÀNH ĐỘNG:"
-          movies={actionMovies} // Sử dụng state thay vì Promise
+          movies={actionMovies}
           link="/category/Hành Động/1"
           favorites={favorites}
+          layout="vertical" // Đặt layout dọc
         />
       )}
+
       {dramaMovies.length > 0 && (
         <Section
           title="PHIM CHÍNH KỊCH:"
-          movies={dramaMovies} // Sử dụng state thay vì Promise
+          movies={dramaMovies}
           link="/category/Chính Kịch/1"
           favorites={favorites}
+          layout="horizontal" // Đặt layout ngang
+        />
+      )}
+      {psychologicalMovies.length > 0 && (
+        <Section
+          title="PHIM TÂM LÝ:"
+          movies={psychologicalMovies}
+          link="/category/Tâm Lý/1"
+          favorites={favorites}
+          layout="vertical" // Đặt layout dọc
         />
       )}
     </>

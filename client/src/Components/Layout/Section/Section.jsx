@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
 
-const Section = ({ title, movies, link, favorites = [] }) => {
+const Section = ({ title, movies, link, favorites = [], layout = "vertical" }) => {
   const scrollRef = useRef(null);
 
   const scrollLeft = () => {
@@ -14,20 +14,17 @@ const Section = ({ title, movies, link, favorites = [] }) => {
     scrollRef.current.scrollBy({ left: 400, behavior: "smooth" });
   };
 
-  // Kiểm tra nếu section là "PHIM HÀNH ĐỘNG" để áp dụng giao diện khác
-  const isActionSection = title === "PHIM HÀNH ĐỘNG:";
-
-  // Giới hạn tối đa 4 phim cho "PHIM HÀNH ĐỘNG"
-  const displayedMovies = isActionSection ? movies.slice(0, 4) : movies;
+  // Giới hạn tối đa 4 phim cho layout dọc
+  const displayedMovies = layout === "vertical" ? movies.slice(0, 4) : movies;
 
   return (
-    <div className={`h-auto sm:p-10 relative ${isActionSection ? "bg-[#1a2634]" : "bg-[#0e1d2e]"}`}>
+    <div className={`h-auto sm:p-10 relative ${layout === "vertical" ? "bg-[#1a2634]" : "bg-[#0e1d2e]"}`}>
       <div className="relative sm:rounded-lg sm:px-5 container max-w-screen-xl mx-auto">
         <div className="flex justify-between pt-5">
           <div className="inline-block">
             <h1
               className={`text-lg md:text-2xl font-bold font-[Montserrat] sm:ml-5 relative inline-block text-transparent bg-clip-text animate-gradient ${
-                isActionSection
+                layout === "vertical"
                   ? "bg-gradient-to-br from-[#00c4ff] to-[#ff00ff]"
                   : "bg-gradient-to-br from-[#ff8a00] to-[#ff2070]"
               }`}
@@ -36,7 +33,7 @@ const Section = ({ title, movies, link, favorites = [] }) => {
             </h1>
             <div
               className={`w-full h-[1px] text-transparent sm:ml-5 ${
-                isActionSection
+                layout === "vertical"
                   ? "bg-gradient-to-br from-[#00c4ff] to-[#ff00ff]"
                   : "bg-gradient-to-br from-[#ff8a00] to-[#ff2070]"
               }`}
@@ -46,7 +43,7 @@ const Section = ({ title, movies, link, favorites = [] }) => {
             <Link
               to={link}
               className={`text-sm font-medium ${
-                isActionSection ? "text-cyan-400 hover:text-cyan-300" : "text-blue-400 hover:text-blue-300"
+                layout === "vertical" ? "text-cyan-400 hover:text-cyan-300" : "text-blue-400 hover:text-blue-300"
               }`}
             >
               Xem Thêm <i className="bx bx-right-arrow-alt"></i>
@@ -54,8 +51,8 @@ const Section = ({ title, movies, link, favorites = [] }) => {
           )}
         </div>
 
-        {isActionSection ? (
-          // Giao diện dạng lưới cho "PHIM HÀNH ĐỘNG" với tối đa 4 phim
+        {layout === "vertical" ? (
+          // Giao diện dạng lưới (dọc) cho "PHIM HÀNH ĐỘNG" và "PHIM CHÍNH KỊCH"
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6">
             {displayedMovies.length > 0 ? (
               displayedMovies.map((item) => (
@@ -63,7 +60,7 @@ const Section = ({ title, movies, link, favorites = [] }) => {
                   <div className="relative rounded-lg shadow-lg group">
                     <LazyLoadImage
                       effect="blur"
-                      src={item.thumb_url} // Sử dụng thumb_url
+                      src={item.thumb_url}
                       alt={item.name}
                       className="w-full h-40 sm:h-48 object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
                     />
@@ -96,7 +93,7 @@ const Section = ({ title, movies, link, favorites = [] }) => {
             )}
           </div>
         ) : (
-          // Giao diện carousel ngang cho các section khác (như "PHIM MỚI CẬP NHẬT")
+          // Giao diện carousel ngang cho "PHIM MỚI CẬP NHẬT"
           <>
             <button
               onClick={scrollLeft}

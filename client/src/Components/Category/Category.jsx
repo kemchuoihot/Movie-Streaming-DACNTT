@@ -76,9 +76,7 @@ const CategoryPage = () => {
                       alt={item.name}
                       className="w-full aspect-[2/3] object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105 backface-visibility-hidden"
                     />
-                    <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
-                      <i className="bx bxs-heart"></i>
-                    </span>
+                    
                     <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
                       HD
                     </span>
