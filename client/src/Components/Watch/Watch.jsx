@@ -19,10 +19,10 @@ const Watch = () => {
   const [hlsInstance, setHlsInstance] = useState(null);
   const [qualityLevels, setQualityLevels] = useState([]);
   const [showQualityOptions, setShowQualityOptions] = useState(false);
-  const [currentLevel, setCurrentLevel] = useState(-1); // -1 là auto
+  const [currentLevel, setCurrentLevel] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Thêm trạng thái loading
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [volume, setVolume] = useState(1);
@@ -32,16 +32,17 @@ const Watch = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [buffered, setBuffered] = useState(0); // New state for buffered progress
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoContainerRef = useRef(null);
 
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedOptions, setShowSpeedOptions] = useState(false);
 
-  // Xác thực người dùng
+  // User authentication
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true); // Bắt đầu trạng thái loading
+      setLoading(true);
       if (currentUser) {
         try {
           const token = await currentUser.getIdToken();
@@ -59,14 +60,14 @@ const Watch = () => {
         setError("Vui lòng đăng nhập để xem phim.");
         navigate("/signin", { state: { from: location } });
       }
-      setLoading(false); // Kết thúc trạng thái loading sau khi xác thực
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [navigate, location]);
 
-  // Fetch film khi user hoặc slug thay đổi
+  // Fetch film when user or slug changes
   useEffect(() => {
-    if (loading) return; // Chờ xác thực xong
+    if (loading) return; // Wait for authentication to complete
     if (user && slug) {
       fetchFilm();
     }
@@ -74,7 +75,7 @@ const Watch = () => {
 
   const fetchFilm = async () => {
     if (!slug) return;
-    setFilm(null); // Reset film data trước khi fetch mới, hiển thị loading
+    setFilm(null); // Reset film data before new fetch, show loading
     setError(""); // Reset error
     try {
       const filmData = await fetchMovieDetails(slug);
@@ -86,14 +87,15 @@ const Watch = () => {
     }
   };
 
+  // Video playback and HLS setup
   useEffect(() => {
     if (film?.movie?.video_url && videoRef.current && user) {
       const video = videoRef.current;
       const videoSrc = film.movie.video_url;
 
+      // Apply initial volume, mute, and playback rate
       video.volume = volume;
       video.muted = isMuted;
-      video.playbackRate = playbackRate;
 
       const query = new URLSearchParams(location.search);
       const startTime = parseFloat(query.get("t")) || 0;
@@ -112,7 +114,7 @@ const Watch = () => {
         }
         if (Hls.isSupported()) {
           const hlsConfig = {
-            maxBufferLength: 30,
+            maxBufferLength: 30, // Keep a decent buffer
           };
           const hls = new Hls(hlsConfig);
           setHlsInstance(hls);
@@ -167,18 +169,35 @@ const Watch = () => {
         setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
       };
 
+      const updateBuffered = () => {
+        if (!videoRef.current || !isFinite(videoRef.current.duration) || videoRef.current.duration === 0) {
+          setBuffered(0);
+          return;
+        }
+        const bufferedTimeRanges = videoRef.current.buffered;
+        if (bufferedTimeRanges.length > 0) {
+          // Get the end time of the last buffered range
+          const lastBufferedTime = bufferedTimeRanges.end(bufferedTimeRanges.length - 1);
+          setBuffered((lastBufferedTime / videoRef.current.duration) * 100);
+        } else {
+          setBuffered(0);
+        }
+      };
+
       const handlePlay = () => setIsPlaying(true);
       const handlePause = () => setIsPlaying(false);
       const handleLoadedMetadata = () => {
         setDuration(video.duration);
         applyStartTime();
         if (video.paused && Hls.isSupported() && !hlsInstance?.media) {
+          // Do nothing if HLS is supported but media not yet attached or playing
         } else if (video.paused && !Hls.isSupported() && video.src) {
           video.play().catch((e) => console.error("Auto-play failed on loadedmetadata:", e));
         }
       };
 
       video.addEventListener("timeupdate", updateTime);
+      video.addEventListener("progress", updateBuffered); // Add progress event listener
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
       video.addEventListener("play", handlePlay);
       video.addEventListener("pause", handlePause);
@@ -223,6 +242,7 @@ const Watch = () => {
 
       return () => {
         video.removeEventListener("timeupdate", updateTime);
+        video.removeEventListener("progress", updateBuffered); // Clean up
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
         video.removeEventListener("play", handlePlay);
         video.removeEventListener("pause", handlePause);
@@ -239,12 +259,12 @@ const Watch = () => {
         }
         if (videoRef.current) {
           videoRef.current.pause();
-          videoRef.current.removeAttribute("src");
-          videoRef.current.load();
+          videoRef.current.removeAttribute("src"); // Remove source to stop loading
+          videoRef.current.load(); // Load to apply the source removal
         }
       };
     }
-  }, [film, user, slug, location, volume, isMuted, playbackRate, navigate]);
+  }, [film, user, slug, location, navigate]); // Dependencies remain optimized
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -270,15 +290,16 @@ const Watch = () => {
 
   const toggleMute = () => {
     if (videoRef.current) {
+      const video = videoRef.current;
       if (!isMuted) {
         setPreviousVolume(volume);
         setVolume(0);
-        videoRef.current.volume = 0;
+        video.volume = 0; // Directly apply to video element
         setIsMuted(true);
       } else {
         const newVolume = previousVolume > 0 ? previousVolume : 0.5;
         setVolume(newVolume);
-        videoRef.current.volume = newVolume;
+        video.volume = newVolume; // Directly apply to video element
         setIsMuted(false);
         if (previousVolume === 0) setPreviousVolume(0.5);
       }
@@ -289,7 +310,7 @@ const Watch = () => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
     if (videoRef.current) {
-      videoRef.current.volume = newVolume;
+      videoRef.current.volume = newVolume; // Directly apply to video element
     }
     setIsMuted(newVolume === 0);
     if (newVolume > 0 && isMuted) {
@@ -320,8 +341,8 @@ const Watch = () => {
 
   const handleSetPlaybackRate = (rate) => {
     if (videoRef.current) {
-      videoRef.current.playbackRate = rate;
-      setPlaybackRate(rate);
+      videoRef.current.playbackRate = rate; // Directly apply to video element
+      setPlaybackRate(rate); // Update state for UI display
     }
     setShowSpeedOptions(false);
   };
@@ -477,10 +498,16 @@ const Watch = () => {
                     <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 via-black/50 to-transparent text-white p-1.5 sm:p-2 flex flex-col transition-opacity duration-300 opacity-0 group-hover:opacity-100 focus-within:opacity-100 group/controls-bar">
                       <div className="w-full px-1 sm:px-2 mb-1.5 sm:mb-2">
                         <div
-                          className="w-full cursor-pointer bg-gray-500/70 rounded-full h-1.5 sm:h-2 md:h-2.5 group/progress overflow-hidden"
+                          className="w-full cursor-pointer bg-gray-500/70 rounded-full h-1.5 sm:h-2 md:h-2.5 group/progress overflow-hidden relative" // Added relative for buffered bar positioning
                           onClick={handleProgressClick}
                           title="Tua video"
                         >
+                          {/* Buffered progress bar */}
+                          <div
+                            className="absolute top-0 left-0 h-full bg-gray-300/50 rounded-full"
+                            style={{ width: `${buffered}%` }}
+                          ></div>
+                          {/* Playback progress bar */}
                           <div
                             className="bg-red-500 h-full rounded-full relative transition-all duration-100 ease-linear"
                             style={{ width: `${progress}%` }}
