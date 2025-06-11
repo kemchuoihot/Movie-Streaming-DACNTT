@@ -5,17 +5,44 @@ import { toast } from 'react-toastify';
 import 'boxicons/css/boxicons.min.css';
 import { auth } from '../Login/Firebase';
 import { signInWithCustomToken } from 'firebase/auth';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+
+// Đăng ký các thành phần của Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [email, setEmail] = useState(''); // Thay username bằng email
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [users, setUsers] = useState([]);
   const [movies, setMovies] = useState([]);
   const [isMoviePopupOpen, setIsMoviePopupOpen] = useState(false);
   const [editMovie, setEditMovie] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
 
   const initialMovieState = {
@@ -38,7 +65,7 @@ const Admin = () => {
   };
 
   const [movieForm, setMovieForm] = useState(initialMovieState);
-  const [form, setForm] = useState({ email: '', isAdmin: false }); // For users
+  const [form, setForm] = useState({ email: '', isAdmin: false });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -238,38 +265,186 @@ const Admin = () => {
     }
   };
 
+  // Stats calculations
+  const totalUsers = users.length;
+  const totalMovies = movies.length;
+  const totalAdmins = users.filter(user => user.isAdmin).length;
+  const avgRating = movies.length > 0 ? (movies.reduce((sum, movie) => sum + (movie.rating || 0), 0) / movies.length).toFixed(1) : 0;
+
+  // Chart data với màu sắc đẹp hơn
+  const topViewedData = {
+    labels: movies.slice(0, 10).map(movie => movie.name.slice(0, 15)),
+    datasets: [
+      {
+        label: 'Lượt xem',
+        data: movies.slice(0, 10).map(movie => movie.views),
+        borderColor: 'rgba(59, 130, 246, 1)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+      },
+    ],
+  };
+
+  const topRatedData = {
+    labels: movies.slice(0, 10).map(movie => movie.name.slice(0, 15)),
+    datasets: [
+      {
+        label: 'Đánh giá',
+        data: movies.slice(0, 10).map(movie => movie.rating || 0),
+        backgroundColor: [
+          'rgba(34, 197, 94, 0.8)',
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(239, 68, 68, 0.8)',
+          'rgba(245, 158, 11, 0.8)',
+          'rgba(139, 92, 246, 0.8)',
+          'rgba(236, 72, 153, 0.8)',
+          'rgba(6, 182, 212, 0.8)',
+          'rgba(251, 146, 60, 0.8)',
+          'rgba(168, 85, 247, 0.8)',
+          'rgba(34, 197, 94, 0.6)',
+        ],
+        borderColor: [
+          'rgba(34, 197, 94, 1)',
+          'rgba(59, 130, 246, 1)',
+          'rgba(239, 68, 68, 1)',
+          'rgba(245, 158, 11, 1)',
+          'rgba(139, 92, 246, 1)',
+          'rgba(236, 72, 153, 1)',
+          'rgba(6, 182, 212, 1)',
+          'rgba(251, 146, 60, 1)',
+          'rgba(168, 85, 247, 1)',
+          'rgba(34, 197, 94, 1)',
+        ],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const genreDistribution = {
+    labels: ['Hành Động', 'Hài Hước', 'Kinh Dị', 'Tình Cảm', 'Khoa Học Viễn Tưởng'],
+    datasets: [
+      {
+        data: [30, 25, 15, 20, 10],
+        backgroundColor: [
+          'rgba(239, 68, 68, 0.8)',
+          'rgba(245, 158, 11, 0.8)',
+          'rgba(139, 92, 246, 0.8)',
+          'rgba(236, 72, 153, 0.8)',
+          'rgba(34, 197, 94, 0.8)',
+        ],
+        borderColor: [
+          'rgba(239, 68, 68, 1)',
+          'rgba(245, 158, 11, 1)',
+          'rgba(139, 92, 246, 1)',
+          'rgba(236, 72, 153, 1)',
+          'rgba(34, 197, 94, 1)',
+        ],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          color: '#e5e7eb',
+          font: { size: 12 },
+          padding: 20,
+        },
+      },
+      title: {
+        display: true,
+        color: '#f3f4f6',
+        font: { size: 16, weight: 'bold' },
+        padding: { top: 10, bottom: 30 },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(75, 85, 99, 0.3)' },
+      },
+      x: {
+        ticks: { color: '#9ca3af', maxRotation: 45 },
+        grid: { color: 'rgba(75, 85, 99, 0.3)' },
+      },
+    },
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#e5e7eb',
+          font: { size: 12 },
+          padding: 20,
+        },
+      },
+    },
+  };
+
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#06121e] flex items-center justify-center">
-        <div className="bg-[#0e274073] p-8 rounded-lg shadow-lg w-full max-w-md">
-          <h2 className="text-2xl text-white font-semibold mb-6 text-center">Đăng nhập Admin</h2>
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
-              <label className="block text-white mb-2">Email</label>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20">
+          <div className="text-center mb-8">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="bx bx-shield-check text-3xl text-white"></i>
+            </div>
+            <h2 className="text-3xl text-white font-bold mb-2">Admin Panel</h2>
+            <p className="text-gray-300">Đăng nhập để quản trị hệ thống</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-white mb-2 font-medium">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-indigo-600"
+                className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                placeholder="admin@example.com"
                 required
               />
             </div>
-            <div className="mb-6">
-              <label className="block text-white mb-2">Mật khẩu</label>
+            <div>
+              <label className="block text-white mb-2 font-medium">Mật khẩu</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-indigo-600"
+                className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                placeholder="••••••••"
                 required
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className={`w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+              className={`w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 ${
+                loading ? 'opacity-60 cursor-not-allowed' : 'hover:from-blue-600 hover:to-purple-700 transform hover:scale-105'
+              }`}
             >
-              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Đang đăng nhập...
+                </div>
+              ) : (
+                'Đăng nhập'
+              )}
             </button>
           </form>
         </div>
@@ -278,312 +453,559 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#06121e] flex">
-      <div className="bg-[#0e274073] text-white w-64 py-8 px-4 fixed h-full">
-        <h2 className="text-2xl font-semibold mb-6">Quản trị viên</h2>
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`block py-2 w-full text-left ${activeTab === 'users' ? 'bg-[#153a61]' : 'hover:bg-[#153a61]'} rounded`}
-        >
-          {activeTab === 'users'? <span className="text-yellow-500 mr-2">●</span> : null} Người dùng
-        </button>
-        <button
-          onClick={() => setActiveTab('movies')}
-          className={`block py-2 w-full text-left ${activeTab === 'movies' ? 'bg-[#153a61]' : 'hover:bg-[#153a61]'} rounded`}
-        >
-          {activeTab === 'movies' ? <span className="text-yellow-500 mr-2">●</span> : null} Phim
-        </button>
-        <button
-          onClick={handleLogout}
-          className="block py-2 w-full text-left hover:bg-[#153a61] rounded mt-4"
-        >
-          <i className="bx bx-log-out mr-2"></i> Đăng xuất
-        </button>
-      </div>
-      <div className="flex-1 p-8 ml-64">
-        <Link
-              to="/"
-              className=" bx bx-home absolute top-4 right-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline z-10"
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Sidebar */}
+      <div className={`fixed left-0 top-0 h-full bg-white/10 backdrop-blur-lg border-r border-white/20 z-40 transition-all duration-300 ${
+        sidebarCollapsed ? 'w-20' : 'w-64'
+      }`}>
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-8">
+            {!sidebarCollapsed && (
+              <div className="flex items-center">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 w-10 h-10 rounded-lg flex items-center justify-center mr-3">
+                  <i className="bx bx-cog text-white text-xl"></i>
+                </div>
+                <h2 className="text-xl font-bold text-white">Admin Panel</h2>
+              </div>
+            )}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
             >
-        </Link>
-        <div className="bg-[#0e274073] text-white rounded-md shadow-md p-5 mt-5">
-          <h2 className="text-xl font-semibold mb-4">
-            {activeTab === 'users' ? 'Quản lý người dùng' : 'Quản lý phim'}
-          </h2>
-          {activeTab === 'users' ? (
-            <>
-              <form onSubmit={handleUserSubmit} className="mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="w-full p-2 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-indigo-600"
-                      required
-                    />
+              <i className={`bx ${sidebarCollapsed ? 'bx-menu' : 'bx-x'} text-xl`}></i>
+            </button>
+          </div>
+
+          <nav className="space-y-2 mr-3">
+            {[
+              { id: 'dashboard', icon: 'bx-home', label: 'Tổng quan' },
+              { id: 'users', icon: 'bx-user', label: 'Người dùng' },
+              { id: 'movies', icon: 'bx-movie', label: 'Phim' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
+                  activeTab === item.id
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <i className={`bx ${item.icon} text-xl`}></i>
+                {!sidebarCollapsed && <span className="ml-3 font-medium">{item.label}</span>}
+              </button>
+            ))}
+          </nav>
+
+          <div className="absolute bottom-6 left-6 right-6">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center px-4 py-3 text-gray-300 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all duration-200"
+            >
+              <i className="bx bx-log-out text-xl"></i>
+              {!sidebarCollapsed && <span className="ml-3 font-medium">Đăng xuất</span>}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+        {/* Header */}
+        <div className="bg-white/10 backdrop-blur-lg border-b border-white/20 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {activeTab === 'dashboard' && 'Tổng quan'}
+                {activeTab === 'users' && 'Quản lý người dùng'}
+                {activeTab === 'movies' && 'Quản lý phim'}
+              </h1>
+              <p className="text-gray-300 mt-1">
+                {activeTab === 'dashboard' && 'Thống kê tổng quan hệ thống'}
+                {activeTab === 'users' && 'Quản lý tài khoản người dùng'}
+                {activeTab === 'movies' && 'Quản lý kho phim'}
+              </p>
+            </div>
+            <Link
+              to="/"
+              className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+            >
+              <i className="bx bx-home mr-2"></i>
+              Trang chủ
+            </Link>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Dashboard Tab */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[
+                  { title: 'Tổng phim', value: totalMovies, icon: 'bx-movie', color: 'from-blue-500 to-cyan-500' },
+                  { title: 'Người dùng', value: totalUsers, icon: 'bx-user', color: 'from-green-500 to-emerald-500' },
+                  { title: 'Quản trị viên', value: totalAdmins, icon: 'bx-shield', color: 'from-purple-500 to-pink-500' },
+                  { title: 'Đánh giá TB', value: avgRating, icon: 'bx-star', color: 'from-yellow-500 to-orange-500' },
+                ].map((stat, index) => (
+                  <div key={index} className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-300 text-sm font-medium">{stat.title}</p>
+                        <p className="text-3xl font-bold text-white mt-2">{stat.value}</p>
+                      </div>
+                      <div className={`bg-gradient-to-r ${stat.color} w-12 h-12 rounded-xl flex items-center justify-center`}>
+                        <i className={`bx ${stat.icon} text-white text-xl`}></i>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.isAdmin}
-                      onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })}
-                      className="mr-2"
-                    />
-                    <label className="text-white">Quyền admin</label>
+                ))}
+              </div>
+
+              {/* Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                  <h3 className="text-xl font-bold text-white mb-4">Lượt xem phim</h3>
+                  <div className="h-80">
+                    <Line data={topViewedData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Top 10 phim có lượt xem cao nhất' } } }} />
                   </div>
                 </div>
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                  <h3 className="text-xl font-bold text-white mb-4">Thể loại phim</h3>
+                  <div className="h-80">
+                    <Doughnut data={genreDistribution} options={doughnutOptions} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                <h3 className="text-xl font-bold text-white mb-4">Đánh giá phim</h3>
+                <div className="h-80">
+                  <Bar data={topRatedData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Top 10 phim có đánh giá cao nhất' } } }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                <h3 className="text-xl font-bold text-white mb-6">Thêm/Chỉnh sửa người dùng</h3>
+                <form onSubmit={handleUserSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-white mb-2 font-medium">Email</label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                        placeholder="user@example.com"
+                        required
+                      />
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.isAdmin}
+                          onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })}
+                          className="sr-only"
+                        />
+                        <div className={`w-12 h-6 rounded-full transition-colors duration-200 ${form.isAdmin ? 'bg-blue-500' : 'bg-gray-600'}`}>
+                          <div className={`w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-200 ${form.isAdmin ? 'translate-x-6' : ''}`}></div>
+                        </div>
+                        <span className="ml-3 text-white font-medium">Quyền admin</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 ${
+                        loading ? 'opacity-60 cursor-not-allowed' : 'hover:from-blue-600 hover:to-purple-700'
+                      }`}
+                    >
+                      {loading ? 'Đang xử lý...' : form._id ? 'Cập nhật' : 'Thêm mới'}
+                    </button>
+                    {form._id && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ email: '', isAdmin: false, _id: null })}
+                        className="px-6 bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+                      >
+                        Hủy
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
+                <div className="px-6 py-4 border-b border-white/20">
+                  <h3 className="text-xl font-bold text-white">Danh sách người dùng</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Email</th>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Quyền</th>
+                        <th className="px-6 py-4 text-center text-white font-semibold">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                      {users.map((user) => (
+                        <tr key={user._id} className="hover:bg-white/5 transition-colors">
+                          <td className="px-6 py-4 text-gray-300">{user.email}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              user.isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                            }`}>
+                              {user.isAdmin ? 'Admin' : 'User'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-2 rounded-lg transition-colors"
+                              >
+                                <i className="bx bx-edit"></i>
+                              </button>
+                              <button
+                                onClick={() => handleDelete(user._id)}
+                                className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 rounded-lg transition-colors"
+                              >
+                                <i className="bx bx-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Movies Tab */}
+          {activeTab === 'movies' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Danh sách phim</h3>
+                  <p className="text-gray-300 mt-1">Tổng cộng {movies.length} phim</p>
+                </div>
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className={`mt-4 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  onClick={() => {
+                    setMovieForm(initialMovieState);
+                    setEditMovie(null);
+                    setIsMoviePopupOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center"
                 >
-                  {loading ? 'Đang xử lý...' : form._id ? 'Cập nhật' : 'Thêm'}
+                  <i className="bx bx-plus mr-2"></i>
+                  Thêm phim mới
                 </button>
-                {form._id && (
-                  <button
-                    type="button"
-                    onClick={() => setForm({ email: '', isAdmin: false, _id: null })}
-                    className="mt-2 w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    Hủy chỉnh sửa
-                  </button>
-                )}
-              </form>
-              <div className="overflow-x-auto">
-                <table className="w-full text-white">
-                  <thead>
-                    <tr className="bg-[#153a61]">
-                      <th className="p-2 text-left">Email</th>
-                      <th className="p-2 text-left">Admin</th>
-                      <th className="p-2 text-left">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user._id} className="border-b border-gray-700">
-                        <td className="p-2">{user.email}</td>
-                        <td className="p-2">{user.isAdmin ? 'Có' : 'Không'}</td>
-                        <td className="p-2">
-                          <button
-                            onClick={() => handleEditUser(user)}
-                            className="bg-blue-600 text-white px-2 py-1 rounded mr-2 hover:bg-blue-700"
-                          >
-                            <i className="bx bx-edit"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user._id)}
-                            className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
-                          >
-                            <i className="bx bx-trash"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => {
-                  setMovieForm(initialMovieState);
-                  setEditMovie(null);
-                  setIsMoviePopupOpen(true);
-                }}
-                className="mb-6 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700"
-              >
-                Thêm phim mới
-              </button>
-              <div className="overflow-x-auto">
-                <table className="w-full text-white">
-                  <thead>
-                    <tr className="bg-[#153a61]">
-                      <th className="p-2">Tên phim</th>
-                      <th className="p-2">Slug</th>
-                      <th className="p-2">Năm</th>
-                      <th className="p-2">Thể loại</th>
-                      <th className="p-2">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {movies.map((movie) => (
-                      <tr key={movie._id} className="border-b border-gray-700">
-                        <td className="p-2">{movie.name}</td>
-                        <td className="p-2">{movie.slug}</td>
-                        <td className="p-2">{movie.year}</td>
-                        <td className="p-2">{movie.genres.join(', ')}</td>
-                        <td className="p-2">
-                          <button
-                            onClick={() => handleEditMovie(movie)}
-                            className="bg-blue-600 text-white px-2 py-1 rounded mr-2 hover:bg-blue-700"
-                          >
-                            <i className="bx bx-edit"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(movie._id)}
-                            className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
-                          >
-                            <i className="bx bx-trash"></i>
-                          </button>
-                        </td>
+
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Poster</th>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Tên phim</th>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Năm</th>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Thể loại</th>
+                        <th className="px-6 py-4 text-left text-white font-semibold">Đánh giá</th>
+                        <th className="px-6 py-4 text-center text-white font-semibold">Hành động</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                      {movies.map((movie) => (
+                        <tr key={movie._id} className="hover:bg-white/5 transition-colors">
+                          <td className="px-6 py-4">
+                            <img 
+                              src={movie.posterUrl || movie.thumbUrl} 
+                              alt={movie.name}
+                              className="w-12 h-16 object-cover rounded-lg"
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="text-white font-medium">{movie.name}</p>
+                              <p className="text-gray-400 text-sm">{movie.originName}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-300">{movie.year}</td>
+                          <td className="px-6 py-4 text-gray-300">{movie.genres.slice(0, 2).join(', ')}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <i className="bx bx-star text-yellow-400 mr-1"></i>
+                              <span className="text-yellow-400 font-semibold">{movie.rating}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() => handleEditMovie(movie)}
+                                className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-2 rounded-lg transition-colors"
+                              >
+                                <i className="bx bx-edit"></i>
+                              </button>
+                              <button
+                                onClick={() => handleDelete(movie._id)}
+                                className="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 rounded-lg transition-colors"
+                              >
+                                <i className="bx bx-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Movie Popup */}
+      {/* Enhanced Movie Popup với animations */}
       {isMoviePopupOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-[#0e2740de] p-6 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <h2 className="text-2xl text-white font-semibold mb-4">
-              {editMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}
-            </h2>
-            <form onSubmit={handleMovieSubmit} className="space-y-4">
-              <input
-                name="slug"
-                placeholder="Slug (e.g., movie-title)"
-                value={movieForm.slug}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-                required
-              />
-              <input
-                name="originName"
-                placeholder="Tên gốc (e.g., The Matrix)"
-                value={movieForm.originName}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-                required
-              />
-              <input
-                name="name"
-                placeholder="Tên (e.g., Ma Trận)"
-                value={movieForm.name}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-                required
-              />
-              <input
-                name="year"
-                type="number"
-                placeholder="Năm (e.g., 1999)"
-                value={movieForm.year}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="time"
-                placeholder="Thời lượng (e.g., 2h 15m)"
-                value={movieForm.time}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="quality"
-                placeholder="Chất lượng (e.g., HD)"
-                value={movieForm.quality}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <select
-                name="status"
-                value={movieForm.status}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              >
-                <option value="completed">Hoàn Thành</option>
-                <option value="ongoing">Đang Chiếu</option>
-              </select>
-              <input
-                name="genres"
-                placeholder="Thể loại (e.g., Action, Sci-Fi)"
-                value={movieForm.genres.join(', ')}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="directors"
-                placeholder="Đạo diễn (e.g., Wachowski)"
-                value={movieForm.directors.join(', ')}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="actors"
-                placeholder="Diễn viên (e.g., Keanu Reeves)"
-                value={movieForm.actors.join(', ')}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="rating"
-                type="number"
-                step="0.1"
-                placeholder="Đánh giá (e.g., 8.7)"
-                value={movieForm.rating}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <textarea
-                name="description"
-                placeholder="Mô tả"
-                value={movieForm.description}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="thumbUrl"
-                placeholder="URL ảnh thumb"
-                value={movieForm.thumbUrl}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="posterUrl"
-                placeholder="URL poster"
-                value={movieForm.posterUrl}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="trailerUrl"
-                placeholder="URL trailer (e.g., https://youtube.com/watch?v=...)"
-                value={movieForm.trailerUrl}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <input
-                name="videoUrl"
-                placeholder="URL video (e.g., embed link hoặc .m3u8)"
-                value={movieForm.videoUrl}
-                onChange={handleMovieChange}
-                className="w-full p-2 bg-gray-800 text-white rounded-lg"
-              />
-              <div className="flex gap-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl animate-slideIn">
+            <div className="px-6 py-4 border-b border-white/20">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">
+                  {editMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}
+                </h2>
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className={`flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
-                  {loading ? 'Đang xử lý...' : editMovie ? 'Cập nhật' : 'Thêm'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setIsMoviePopupOpen(false)}
-                  className="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
-                  Hủy
+                  <i className="bx bx-x text-2xl"></i>
                 </button>
               </div>
-            </form>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <form onSubmit={handleMovieSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Slug *</label>
+                    <input
+                      name="slug"
+                      placeholder="movie-title-slug"
+                      value={movieForm.slug}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Tên gốc *</label>
+                    <input
+                      name="originName"
+                      placeholder="The Matrix"
+                      value={movieForm.originName}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Tên tiếng Việt *</label>
+                    <input
+                      name="name"
+                      placeholder="Ma Trận"
+                      value={movieForm.name}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Năm phát hành</label>
+                    <input
+                      name="year"
+                      type="number"
+                      placeholder="1999"
+                      value={movieForm.year}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Thời lượng</label>
+                    <input
+                      name="time"
+                      placeholder="136 phút"
+                      value={movieForm.time}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Chất lượng</label>
+                    <select
+                      name="quality"
+                      value={movieForm.quality}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg"
+                    >
+                      <option value="">Chọn chất lượng</option>
+                      <option value="HD">HD</option>
+                      <option value="Full HD">Full HD</option>
+                      <option value="4K">4K</option>
+                      <option value="CAM">CAM</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Trạng thái</label>
+                    <select
+                      name="status"
+                      value={movieForm.status}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg"
+                    >
+                      <option value="completed">Hoàn thành</option>
+                      <option value="ongoing">Đang chiếu</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Đánh giá (0-10)</label>
+                    <input
+                      name="rating"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="8.7"
+                      value={movieForm.rating}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Thể loại</label>
+                    <input
+                      name="genres"
+                      placeholder="Hành Động, Khoa Học Viễn Tưởng, Phiêu Lưu"
+                      value={movieForm.genres.join(', ')}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Đạo diễn</label>
+                    <input
+                      name="directors"
+                      placeholder="Lana Wachowski, Lilly Wachowski"
+                      value={movieForm.directors.join(', ')}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Diễn viên</label>
+                    <input
+                      name="actors"
+                      placeholder="Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss"
+                      value={movieForm.actors.join(', ')}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">Mô tả</label>
+                    <textarea
+                      name="description"
+                      placeholder="Mô tả nội dung phim..."
+                      value={movieForm.description}
+                      onChange={handleMovieChange}
+                      rows="4"
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">URL Thumbnail</label>
+                    <input
+                      name="thumbUrl"
+                      placeholder="https://example.com/thumb.jpg"
+                      value={movieForm.thumbUrl}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">URL Poster</label>
+                    <input
+                      name="posterUrl"
+                      placeholder="https://example.com/poster.jpg"
+                      value={movieForm.posterUrl}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">URL Trailer</label>
+                    <input
+                      name="trailerUrl"
+                      placeholder="https://youtube.com/watch?v=..."
+                      value={movieForm.trailerUrl}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white mb-2 font-medium">URL Video</label>
+                    <input
+                      name="videoUrl"
+                      placeholder="https://example.com/video.m3u8"
+                      value={movieForm.videoUrl}
+                      onChange={handleMovieChange}
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 ${
+                      loading ? 'opacity-60 cursor-not-allowed' : 'hover:from-blue-600 hover:to-purple-700'
+                    }`}
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Đang xử lý...
+                      </div>
+                    ) : (
+                      editMovie ? 'Cập nhật phim' : 'Thêm phim'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsMoviePopupOpen(false)}
+                    className="px-8 bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

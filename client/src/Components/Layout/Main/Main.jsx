@@ -22,10 +22,12 @@ const Main = () => {
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [dramaMovies, setDramaMovies] = useState([]); // Thêm state cho phim chính kịch
-  const [actionMovies, setActionMovies] = useState([]); // Thêm state cho phim hành động
-  const [psychologicalMovies, setPsychologicalMovies] = useState([]); // Thêm state cho phim tâm lý
+  const [dramaMovies, setDramaMovies] = useState([]);
+  const [actionMovies, setActionMovies] = useState([]);
+  const [psychologicalMovies, setPsychologicalMovies] = useState([]);
   const historyScrollRef = useRef(null);
+  const [topViewedMovies, setTopViewedMovies] = useState([]);
+  const [topRatedMovie, setTopRatedMovie] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -79,7 +81,6 @@ const Main = () => {
 
   useEffect(() => {
     let isMounted = true;
-
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -112,15 +113,12 @@ const Main = () => {
         }
       }
     };
-
     fetchData();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Fetch phim hành động
   useEffect(() => {
     const fetchActionMovies = async () => {
       try {
@@ -130,16 +128,15 @@ const Main = () => {
             params: { limit: 10 },
           }
         );
-        console.log("API Response for Hành Động:", response.data); // Debug log
         setActionMovies(response.data.data.items || []);
       } catch (error) {
         console.error("Error fetching Hành Động movies:", error);
         setActionMovies([]);
       }
     };
-
     fetchActionMovies();
   }, []);
+
   useEffect(() => {
     const fetchDramaMovies = async () => {
       try {
@@ -149,18 +146,15 @@ const Main = () => {
             params: { limit: 10 },
           }
         );
-        console.log("API Response for Chính Kịch:", response.data); // Debug log
         setDramaMovies(response.data.data.items || []);
       } catch (error) {
         console.error("Error fetching Chính Kịch movies:", error);
         setDramaMovies([]);
       }
     };
-
     fetchDramaMovies();
   }, []);
 
-  //Fetch phim Tâm lý
   useEffect(() => {
     const fetchPsychologicalMovies = async () => {
       try {
@@ -170,15 +164,49 @@ const Main = () => {
             params: { limit: 10 },
           }
         );
-        console.log("API Response for Tâm Lý:", response.data); // Debug log
         setPsychologicalMovies(response.data.data.items || []);
       } catch (error) {
         console.error("Error fetching Tâm Lý movies:", error);
         setPsychologicalMovies([]);
       }
     };
-
     fetchPsychologicalMovies();
+  }, []);
+
+  useEffect(() => {
+    const fetchTopViewedMovies = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/api/movies/top-viewed"
+        );
+        setTopViewedMovies(response.data.items || []);
+        console.log("Top Viewed Movies:", response.data.items);
+      } catch (error) {
+        console.error(
+          "Lỗi khi lấy top phim xem nhiều:",
+          error.response?.data || error.message
+        );
+      }
+    };
+    fetchTopViewedMovies();
+  }, []);
+
+  useEffect(() => {
+    const fetchTopRatedMovie = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/api/movies/top-rated"
+        );
+        setTopRatedMovie(response.data.movie);
+        console.log("Top Rated Movie:", response.data.movie);
+      } catch (error) {
+        console.error(
+          "Lỗi khi lấy phim đánh giá cao nhất:",
+          error.response?.data || error.message
+        );
+      }
+    };
+    fetchTopRatedMovie();
   }, []);
 
   useEffect(() => {
@@ -197,7 +225,6 @@ const Main = () => {
 
   useEffect(() => {
     if (!slug) return;
-
     const getMovieDetails = async () => {
       try {
         const data = await fetchMovieDetails(slug);
@@ -211,7 +238,6 @@ const Main = () => {
         console.error("Error fetching movie details:", error.message);
       }
     };
-
     getMovieDetails();
   }, [slug]);
 
@@ -257,22 +283,18 @@ const Main = () => {
 
   if (loading) {
     return (
-      <SkeletonTheme baseColor="#151d25" highlightColor="#525252">
-        <div className="relative h-[600px] md:h-[800px]">
-          <div className="absolute left-0 w-full h-full bg-gradient-to-r from-gray-950 bg-gray-950 bg-opacity-60 flex items-center justify-between lg:px-40 space-y-4">
-            <div className="relative w-1/2 ml-10 lg:ml-0">
-              <Skeleton className="mb-4 !w-[180px] !h-[30px] md:!w-[300px] md:!h-[40px]" />
-              <Skeleton className="mb-4 !w-[100px] !h-[20px] md:!w-[200px] md:!h-[30px]" />
-              <Skeleton count={3} className="mb-4" />
-              <Skeleton className="mb-5 !w-[60px] !h-[15px] md:!w-[100px] md:!h-[20px]" />
-              <Skeleton
-                width={150}
-                height={50}
-                className="rounded-lg !w-[100px] !h-[30px] md:!w-[150px] md:!h-[50px]"
-              />
+      <SkeletonTheme baseColor="#1a1a2e" highlightColor="#3d4466">
+        <div className="relative h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+          <div className="absolute left-0 w-full h-full bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center justify-between px-4 lg:px-40">
+            <div className="relative w-full lg:w-1/2 space-y-4">
+              <Skeleton className="!w-3/4 !h-8 md:!h-12 rounded-xl" />
+              <Skeleton className="!w-1/2 !h-6 md:!h-8 rounded-xl" />
+              <Skeleton count={3} className="!h-4 md:!h-6 rounded-xl" />
+              <Skeleton className="!w-1/3 !h-4 md:!h-6 rounded-xl" />
+              <Skeleton className="!w-32 !h-12 md:!w-40 md:!h-14 rounded-2xl" />
             </div>
-            <div className="relative w-1/2 mx-auto flex justify-center">
-              <Skeleton className="rounded-lg mx-auto !h-[250px] !w-[150px] md:!h-[400px] md:!w-[300px] lg:!h-[530px] lg:!w-[400px]" />
+            <div className="hidden lg:block relative w-1/2 flex justify-end">
+              <Skeleton className="!w-80 !h-[500px] rounded-2xl" />
             </div>
           </div>
         </div>
@@ -282,8 +304,12 @@ const Main = () => {
 
   if (error) {
     return (
-      <div className="bg-[#06121e] h-screen text-white flex items-center justify-center">
-        Error: {error}
+      <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 h-screen text-white flex items-center justify-center">
+        <div className="text-center p-8 bg-white/10 backdrop-blur rounded-2xl border border-red-500/30">
+          <i className="bx bx-error text-6xl text-red-400 mb-4"></i>
+          <h2 className="text-2xl font-bold mb-2">Có lỗi xảy ra</h2>
+          <p className="text-red-300">Error: {error}</p>
+        </div>
       </div>
     );
   }
@@ -295,98 +321,104 @@ const Main = () => {
         showFullContent={showFullContent}
         toggleContent={toggleContent}
       />
+      
+      {/* Continue Watching Section */}
       {user && history.length > 0 && (
-        <div className="bg-[#0e1d2e] h-auto sm:p-10 relative">
-          <div className="relative sm:rounded-lg sm:px-5 container max-w-screen-xl mx-auto">
-            <div className="flex justify-between pt-5">
-              <div className="inline-block">
-                <h1 className="text-lg md:text-2xl font-bold font-[Montserrat] sm:ml-5 relative bg-gradient-to-br from-[#ff8a00] to-[#ff2070] inline-block text-transparent bg-clip-text animate-gradient">
-                  TIẾP TỤC XEM:
-                </h1>
-                <div className="w-full h-[1px] text-transparent bg-gradient-to-br from-[#ff8a00] to-[#ff2070] sm:ml-5"></div>
-              </div>
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 py-8 lg:py-16">
+          <div className="container max-w-screen-xl mx-auto  px-4 sm:px-6 lg:px-8 relative">
+            <div className="mb-8">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-[Montserrat] text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 flex items-center">
+                <i className="bx bx-history mr-3 text-purple-400"></i>
+                TIẾP TỤC XEM
+              </h1>
+              <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mt-2"></div>
             </div>
+            
+            {/* Navigation Buttons */}
             <button
               onClick={historyScrollLeft}
-              className="hidden sm:block text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:scale-110 transition-transform duration-300 absolute -left-10 top-1/2 transform -translate-y-1/2 p-3 rounded-full shadow-lg z-10"
+              className="hidden lg:block absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 backdrop-blur text-white p-3 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-110"
             >
               <i className="bx bx-chevron-left text-2xl"></i>
             </button>
+            
             <div
               ref={historyScrollRef}
-              className="overflow-x-auto whitespace-nowrap py-4 no-scrollbar snap-mandatory snap-x"
+              className="overflow-x-auto scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {history.map((entry, index) => (
-                <Link
-                  key={entry.slug}
-                  to={`/watch/${entry.slug}?t=${entry.stoppedAt}`}
-                >
-                  <div className="inline-block p-2 snap-start">
-                    <div
-                      className="relative rounded-lg shadow-lg group"
-                      style={{ willChange: "transform, opacity" }}
-                    >
-                      <LazyLoadImage
-                        effect="blur"
-                        src={entry.posterUrl}
-                        alt={entry.name}
-                        className="w-full h-80 md:w-[200px] md:h-80 object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105 backface-visibility-hidden"
-                      />
-                      {favorites.includes(entry.slug) && (
-                        <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
-                          <i className="bx bxs-heart"></i>
+              <div className="flex space-x-4 pb-4">
+                {history.map((entry, index) => (
+                  <Link
+                    key={entry.slug}
+                    to={`/watch/${entry.slug}?t=${entry.stoppedAt}`}
+                    className="flex-shrink-0 group"
+                  >
+                    <div className="relative bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 w-48 sm:w-56">
+                      <div className="relative">
+                        <LazyLoadImage
+                          effect="blur"
+                          src={entry.posterUrl}
+                          alt={entry.name}
+                          className="w-full h-64 sm:h-72 object-cover rounded-xl"
+                        />
+                        
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <button className="bg-white/90 backdrop-blur text-black rounded-full p-4 hover:bg-white transition-colors shadow-lg">
+                            <i className="bx bx-play text-2xl"></i>
+                          </button>
+                        </div>
+                        
+                        {/* Badges */}
+                        {favorites.includes(entry.slug) && (
+                          <span className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                            <i className="bx bxs-heart"></i>
+                          </span>
+                        )}
+                        <span className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                          HD
                         </span>
-                      )}
-                      <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                        HD
-                      </span>
-                      <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 rounded-lg">
-                        <button className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors">
-                          <i className="bx bx-play text-2xl"></i>
-                        </button>
-                        <h3 className="text-white text-sm font-medium text-center mt-2">
-                          {entry.name}
-                        </h3>
-                        <p className="text-gray-300 text-xs mt-1">
-                          Đã xem:{" "}
-                          {Math.round(
-                            getProgressPercentage(
-                              entry.stoppedAt,
-                              entry.duration
-                            )
-                          )}
-                          %
-                        </p>
-                      </div>
-                      <div className="absolute bottom-0 left-0 w-full px-2">
-                        <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-red-500 to-pink-500 h-1.5 rounded-full transition-all duration-300"
-                            style={{
-                              width: `${getProgressPercentage(
-                                entry.stoppedAt,
-                                entry.duration
-                              )}%`,
-                            }}
-                          ></div>
+                        
+                        {/* Progress Bar */}
+                        <div className="absolute bottom-2 left-2 right-2">
+                          <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden backdrop-blur">
+                            <div
+                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${getProgressPercentage(
+                                  entry.stoppedAt,
+                                  entry.duration
+                                )}%`,
+                              }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
-                      <div className="sm:hidden block">
-                        <h1 className="text-2xl font-bold font-[Montserrat] italic bg-gradient-to-br from-[#fecf59] to-[#fff1cc] inline-block text-transparent bg-clip-text">
-                          {index + 1}
-                        </h1>
-                        <h1 className="max-w-40 text-xl font-[Montserrat] italic text-ellipsis overflow-hidden whitespace-nowrap font-bold inline-block text-white relative ml-1 top-2">
+                      
+                      {/* Movie Info */}
+                      <div className="mt-4">
+                        <h3 className="text-white font-semibold text-sm sm:text-base truncate group-hover:text-purple-400 transition-colors">
                           {entry.name}
-                        </h1>
+                        </h3>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Đã xem: {Math.round(getProgressPercentage(entry.stoppedAt, entry.duration))}%
+                        </p>
+                      </div>
+                      
+                      {/* Mobile Index */}
+                      <div className="lg:hidden absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold w-8 h-8 rounded-full flex items-center justify-center">
+                        {index + 1}
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+              </div>
             </div>
+            
             <button
               onClick={historyScrollRight}
-              className="hidden sm:block text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:scale-110 transition-transform duration-300 absolute -right-10 top-1/2 transform -translate-y-1/2 p-3 rounded-full shadow-lg z-10"
+              className="hidden lg:block absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 backdrop-blur text-white p-3 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-110"
             >
               <i className="bx bx-chevron-right text-2xl"></i>
             </button>
@@ -394,42 +426,177 @@ const Main = () => {
         </div>
       )}
 
+      {/* New Movies Section */}
       {data.length > 0 && (
         <Section
-          title="PHIM MỚI CẬP NHẬT:"
+          title="PHIM MỚI CẬP NHẬT"
           movies={data.slice(0, 10)}
           link="/category/all/1"
           favorites={favorites}
-          layout="horizontal" // Đặt layout ngang
+          layout="horizontal"
         />
       )}
 
+      {/* Top Movies Section */}
+      <div className="bg-gradient-to-br from-slate-900 via-gray-800 to-slate-900 py-12 lg:py-20">
+        <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 lg:gap-12">
+            {/* Top Viewed Movies */}
+            <section className="bg-white/10 backdrop-blur rounded-3xl shadow-2xl p-6 lg:p-8 border border-white/20">
+              <div className="flex items-center mb-8">
+                <div className="bg-gradient-to-r from-red-500 to-pink-500 p-3 rounded-2xl mr-4">
+                  <i className="bx bx-trending-up text-2xl text-white"></i>
+                </div>
+                <div>
+                  <h2 className="text-2xl lg:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-pink-500">
+                    Thịnh Hành Nhất
+                  </h2>
+                  <p className="text-gray-400 text-sm">Phim được xem nhiều nhất tuần này</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                {topViewedMovies.slice(0, 5).map((movie, index) => (
+                  <Link
+                    key={movie.slug}
+                    to={`/detail/${movie.slug}`}
+                    className="group flex items-center bg-white/5 backdrop-blur rounded-2xl p-4 border border-white/10 hover:bg-white/10 hover:border-red-400/50 transition-all duration-300"
+                  >
+                    <div className="relative flex-shrink-0 mr-4">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index === 0 ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' :
+                        index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-400 text-black' :
+                        index === 2 ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white' :
+                        'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      }`}>
+                        {index + 1}
+                      </div>
+                    </div>
+                    
+                    <div className="w-14 h-20 flex-shrink-0 mr-4">
+                      <LazyLoadImage
+                        effect="blur"
+                        src={movie.poster_url || movie.thumb_url}
+                        alt={movie.name}
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-semibold text-sm lg:text-base truncate group-hover:text-red-400 transition-colors">
+                        {movie.name}
+                      </h3>
+                      <p className="text-gray-400 text-xs mt-1">{movie.year}</p>
+                    </div>
+                    
+                    <div className="flex-shrink-0 ml-4">
+                      {index === 0 && (
+                        <div className="flex items-center text-red-400">
+                          <i className="bx bx-trending-up text-xl mr-1"></i>
+                          <span className="text-xs font-semibold">HOT</span>
+                        </div>
+                      )}
+                      {index === 1 && (
+                        <i className="bx bx-up-arrow-alt text-xl text-green-400"></i>
+                      )}
+                      {index === 2 && (
+                        <i className="bx bx-up-arrow-alt text-xl text-blue-400"></i>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {/* Top Rated Movie */}
+            <section className="bg-white/10 backdrop-blur rounded-3xl shadow-2xl p-6 lg:p-8 border border-white/20">
+              <div className="flex items-center mb-8">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-3 rounded-2xl mr-4">
+                  <i className="bx bxs-star text-2xl text-black"></i>
+                </div>
+                <div>
+                  <h2 className="text-2xl lg:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+                    Đánh Giá Cao Nhất
+                  </h2>
+                  <p className="text-gray-400 text-sm">Phim được yêu thích nhất</p>
+                </div>
+              </div>
+              
+              {topRatedMovie && (
+                <Link
+                  to={`/detail/${topRatedMovie.slug}`}
+                  className="group block bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 hover:bg-white/10 hover:border-yellow-400/50 transition-all duration-300"
+                >
+                  <div className="relative mx-auto w-48 sm:w-56 lg:w-64">
+                    <LazyLoadImage
+                      effect="blur"
+                      src={topRatedMovie.poster_url || topRatedMovie.thumb_url}
+                      alt={topRatedMovie.name}
+                      className="w-full aspect-[2/3] object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105"
+                    />
+                    
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <button className="bg-white/90 backdrop-blur text-black rounded-full p-4 hover:bg-white transition-colors shadow-lg">
+                        <i className="bx bx-play text-2xl"></i>
+                      </button>
+                    </div>
+                    
+                    {/* Rating Badge */}
+                    <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 rounded-full text-sm font-bold flex items-center shadow-lg">
+                      <i className="bx bxs-star mr-1"></i>
+                      {topRatedMovie.rating?.toFixed(1)}
+                    </div>
+                    
+                    {/* Crown */}
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 rounded-full text-xs font-bold">
+                      👑 #1
+                    </div>
+                  </div>
+                  
+                  <div className="text-center mt-6">
+                    <h3 className="text-white text-lg lg:text-xl font-bold group-hover:text-yellow-400 transition-colors">
+                      {topRatedMovie.name}
+                    </h3>
+                    <p className="text-gray-400 text-sm mt-2">
+                      Năm: {topRatedMovie.year}
+                    </p>
+                  </div>
+                </Link>
+              )}
+            </section>
+          </div>
+        </div>
+      </div>
+
+      {/* Movie Categories */}
       {actionMovies.length > 0 && (
         <Section
-          title="PHIM HÀNH ĐỘNG:"
+          title="PHIM HÀNH ĐỘNG"
           movies={actionMovies}
           link="/category/Hành Động/1"
           favorites={favorites}
-          layout="vertical" // Đặt layout dọc
+          layout="vertical"
         />
       )}
 
       {dramaMovies.length > 0 && (
         <Section
-          title="PHIM CHÍNH KỊCH:"
+          title="PHIM CHÍNH KỊCH"
           movies={dramaMovies}
           link="/category/Chính Kịch/1"
           favorites={favorites}
-          layout="horizontal" // Đặt layout ngang
+          layout="horizontal"
         />
       )}
+
       {psychologicalMovies.length > 0 && (
         <Section
-          title="PHIM TÂM LÝ:"
+          title="PHIM TÂM LÝ"
           movies={psychologicalMovies}
           link="/category/Tâm Lý/1"
           favorites={favorites}
-          layout="vertical" // Đặt layout dọc
+          layout="vertical"
         />
       )}
     </>

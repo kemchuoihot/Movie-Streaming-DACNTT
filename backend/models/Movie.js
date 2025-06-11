@@ -27,6 +27,13 @@ const movieSchema = new mongoose.Schema({
   videoUrl: { type: String },
   ratings: [ratingSchema], // Mảng ratings với schema con
   createdAt: { type: Date, default: Date.now },
+  views: { type: Number, default: 0 },
+  viewHistory: [
+    {
+      timestamp: { type: Date, default: Date.now },
+      count: { type: Number, default: 1 },
+    },
+  ],
 });
 
 module.exports = mongoose.model('Movie', movieSchema);

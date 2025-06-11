@@ -18,144 +18,200 @@ const Section = ({ title, movies, link, favorites = [], layout = "vertical" }) =
   const displayedMovies = layout === "vertical" ? movies.slice(0, 4) : movies;
 
   return (
-    <div className={`h-auto sm:p-10 relative ${layout === "vertical" ? "bg-[#1a2634]" : "bg-[#0e1d2e]"}`}>
-      <div className="relative sm:rounded-lg sm:px-5 container max-w-screen-xl mx-auto">
-        <div className="flex justify-between pt-5">
-          <div className="inline-block">
-            <h1
-              className={`text-lg md:text-2xl font-bold font-[Montserrat] sm:ml-5 relative inline-block text-transparent bg-clip-text animate-gradient ${
-                layout === "vertical"
-                  ? "bg-gradient-to-br from-[#00c4ff] to-[#ff00ff]"
-                  : "bg-gradient-to-br from-[#ff8a00] to-[#ff2070]"
-              }`}
-            >
+    <div className={`relative py-12 lg:py-16 ${
+      layout === "vertical" 
+        ? "bg-gradient-to-br from-slate-900 via-gray-800 to-slate-900" 
+        : "bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900"
+    }`}>
+      <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header Section */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="space-y-2">
+            <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold font-[Montserrat] text-transparent bg-clip-text ${
+              layout === "vertical"
+                ? "bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600"
+                : "bg-gradient-to-r from-orange-400 via-pink-500 to-red-500"
+            }`}>
               {title}
             </h1>
-            <div
-              className={`w-full h-[1px] text-transparent sm:ml-5 ${
-                layout === "vertical"
-                  ? "bg-gradient-to-br from-[#00c4ff] to-[#ff00ff]"
-                  : "bg-gradient-to-br from-[#ff8a00] to-[#ff2070]"
-              }`}
-            ></div>
+            <div className={`w-24 h-1 rounded-full ${
+              layout === "vertical"
+                ? "bg-gradient-to-r from-cyan-500 to-purple-500"
+                : "bg-gradient-to-r from-orange-500 to-pink-500"
+            }`}></div>
           </div>
+          
           {link && (
             <Link
               to={link}
-              className={`text-sm font-medium ${
-                layout === "vertical" ? "text-cyan-400 hover:text-cyan-300" : "text-blue-400 hover:text-blue-300"
+              className={`group flex items-center px-6 py-3 rounded-full font-medium transition-all duration-300 transform hover:scale-105 ${
+                layout === "vertical" 
+                  ? "bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30" 
+                  : "bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border border-orange-500/30"
               }`}
             >
-              Xem Thêm <i className="bx bx-right-arrow-alt"></i>
+              Xem Thêm
+              <i className="bx bx-right-arrow-alt ml-2 text-lg group-hover:translate-x-1 transition-transform duration-300"></i>
             </Link>
           )}
         </div>
 
         {layout === "vertical" ? (
-          // Giao diện dạng lưới (dọc) cho "PHIM HÀNH ĐỘNG" và "PHIM CHÍNH KỊCH"
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6">
+          // Grid Layout (Vertical) - Fixed overflow and increased height
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {displayedMovies.length > 0 ? (
               displayedMovies.map((item) => (
-                <Link key={item.slug} to={`/detail/${item.slug}`}>
-                  <div className="relative rounded-lg shadow-lg group">
-                    <LazyLoadImage
-                      effect="blur"
-                      src={item.thumb_url}
-                      alt={item.name}
-                      className="w-full h-40 sm:h-48 object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105"
-                    />
-                    {favorites.includes(item.slug) && (
-                      <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
-                        <i className="bx bxs-heart"></i>
+                <Link key={item.slug} to={`/detail/${item.slug}`} className="group">
+                  <div className="relative bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 overflow-hidden">
+                    <div className="relative overflow-hidden rounded-xl">
+                      <LazyLoadImage
+                        effect="blur"
+                        src={item.thumb_url}
+                        alt={item.name}
+                        className="w-full h-56 sm:h-64 lg:h-72 object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <button className="bg-white/90 backdrop-blur text-black rounded-full p-4 hover:bg-white transition-colors shadow-lg">
+                          <i className="bx bx-play text-2xl"></i>
+                        </button>
+                      </div>
+                      
+                      {/* Badges */}
+                      {favorites.includes(item.slug) && (
+                        <span className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                          <i className="bx bxs-heart"></i>
+                        </span>
+                      )}
+                      <span className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        HD
                       </span>
-                    )}
-                    <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                      HD
-                    </span>
-                    <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 rounded-lg">
-                      <button className="bg-white text-black rounded-full p-2 hover:bg-gray-200 transition-colors">
-                        <i className="bx bx-play text-xl"></i>
-                      </button>
-                      <h3 className="text-white text-xs font-medium text-center mt-1">{item.name}</h3>
-                      <p className="text-gray-300 text-xs mt-1">Năm: {item.year}</p>
                     </div>
-                    <div className="mt-3">
-                      <h3 className="text-white text-sm font-medium text-ellipsis overflow-hidden whitespace-nowrap">
+                    
+                    {/* Movie Info */}
+                    <div className="mt-4 space-y-2">
+                      <h3 className="text-white font-semibold text-sm lg:text-base truncate group-hover:text-cyan-400 transition-colors">
                         {item.name}
                       </h3>
-                      <p className="text-gray-400 text-xs">Thể loại: {item.genre}</p>
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>{item.year}</span>
+                        {item.genre && (
+                          <span className="bg-gray-700/50 px-2 py-1 rounded-full text-xs">
+                            {item.genre.split(',')[0]}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Link>
               ))
             ) : (
-              <p className="text-white text-center w-full col-span-full">Không có phim trong danh mục này.</p>
+              <div className="col-span-full text-center py-12">
+                <i className="bx bx-film text-4xl text-gray-600 mb-4"></i>
+                <p className="text-gray-400">Không có phim trong danh mục này.</p>
+              </div>
             )}
           </div>
         ) : (
-          // Giao diện carousel ngang cho "PHIM MỚI CẬP NHẬT"
-          <>
+          // Horizontal Carousel Layout - Fixed overflow
+          <div className="relative">
+            {/* Navigation Buttons */}
             <button
               onClick={scrollLeft}
-              className="hidden sm:block text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:scale-110 transition-transform duration-300 absolute -left-10 top-1/2 transform -translate-y-1/2 p-3 rounded-full shadow-lg z-10"
+              className="hidden lg:block absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 backdrop-blur text-white p-3 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-110"
             >
               <i className="bx bx-chevron-left text-2xl"></i>
             </button>
+            
             <div
               ref={scrollRef}
-              className="overflow-x-auto whitespace-nowrap py-4 no-scrollbar snap-mandatory snap-x"
+              className="overflow-x-auto scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {displayedMovies.length > 0 ? (
-                displayedMovies.map((item, index) => (
-                  <Link key={item.slug} to={`/detail/${item.slug}`}>
-                    <div className="inline-block p-2 snap-start">
-                      <div className="relative rounded-lg shadow-lg group" style={{ willChange: "transform, opacity" }}>
-                        <LazyLoadImage
-                          effect="blur"
-                          src={item.poster_url}
-                          alt={item.name}
-                          className="w-full h-80 md:w-[200px] md:h-80 object-cover rounded-lg transition-transform duration-300 ease-in-out group-hover:scale-105 backface-visibility-hidden"
-                        />
-                        {favorites.includes(item.slug) && (
-                          <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
-                            <i className="bx bxs-heart"></i>
+              <div className="flex space-x-4 pb-4">
+                {displayedMovies.length > 0 ? (
+                  displayedMovies.map((item, index) => (
+                    <Link key={item.slug} to={`/detail/${item.slug}`} className="flex-shrink-0 group">
+                      <div className="relative bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 w-48 sm:w-56 overflow-hidden">
+                        <div className="relative overflow-hidden rounded-xl">
+                          <LazyLoadImage
+                            effect="blur"
+                            src={item.poster_url}
+                            alt={item.name}
+                            className="w-full h-64 sm:h-72 object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          
+                          {/* Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <button className="bg-white/90 backdrop-blur text-black rounded-full p-4 hover:bg-white transition-colors shadow-lg">
+                              <i className="bx bx-play text-2xl"></i>
+                            </button>
+                          </div>
+                          
+                          {/* Badges */}
+                          {favorites.includes(item.slug) && (
+                            <span className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                              <i className="bx bxs-heart"></i>
+                            </span>
+                          )}
+                          <span className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                            HD
                           </span>
-                        )}
-                        <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                          HD
-                        </span>
-                        <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 rounded-lg">
-                          <button className="bg-white text-black rounded-full p-3 hover:bg-gray-200 transition-colors">
-                            <i className="bx bx-play text-2xl"></i>
-                          </button>
-                          <h3 className="text-white text-sm font-medium text-center mt-2">{item.name}</h3>
-                          <p className="text-gray-300 text-xs mt-1">Năm: {item.year}</p>
-                        </div>
-                        <div className="sm:hidden block">
-                          <h1 className="text-2xl font-bold font-[Montserrat] italic bg-gradient-to-br from-[#fecf59] to-[#fff1cc] inline-block text-transparent bg-clip-text">
+                          
+                          {/* Mobile Index */}
+                          <div className="lg:hidden absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold w-8 h-8 rounded-full flex items-center justify-center">
                             {index + 1}
-                          </h1>
-                          <h1 className="max-w-40 text-xl font-[Montserrat] italic text-ellipsis overflow-hidden whitespace-nowrap font-bold inline-block text-white relative ml-1 top-2">
+                          </div>
+                        </div>
+                        
+                        {/* Movie Info */}
+                        <div className="mt-4 space-y-2">
+                          <h3 className="text-white font-semibold text-sm sm:text-base truncate group-hover:text-orange-400 transition-colors">
                             {item.name}
-                          </h1>
+                          </h3>
+                          <div className="flex items-center justify-between text-xs text-gray-400">
+                            <span>{item.year}</span>
+                            {item.genre && (
+                              <span className="bg-gray-700/50 px-2 py-1 rounded-full text-xs">
+                                {item.genre.split(',')[0]}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <p className="text-white text-center w-full">Không có phim trong danh mục này.</p>
-              )}
+                    </Link>
+                  ))
+                ) : (
+                  <div className="w-full text-center py-12">
+                    <i className="bx bx-film text-4xl text-gray-600 mb-4"></i>
+                    <p className="text-gray-400">Không có phim trong danh mục này.</p>
+                  </div>
+                )}
+              </div>
             </div>
+            
             <button
               onClick={scrollRight}
-              className="hidden sm:block text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:scale-110 transition-transform duration-300 absolute -right-10 top-1/2 transform -translate-y-1/2 p-3 rounded-full shadow-lg z-10"
+              className="hidden lg:block absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/10 backdrop-blur text-white p-3 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-110"
             >
               <i className="bx bx-chevron-right text-2xl"></i>
             </button>
-          </>
+          </div>
         )}
       </div>
+      
+      {/* Decorative Elements */}
+      <div className={`absolute top-10 left-10 w-20 h-20 rounded-full blur-xl ${
+        layout === "vertical" 
+          ? "bg-gradient-to-r from-cyan-600/20 to-purple-600/20" 
+          : "bg-gradient-to-r from-orange-600/20 to-pink-600/20"
+      }`}></div>
+      <div className={`absolute bottom-10 right-1/4 w-32 h-32 rounded-full blur-2xl ${
+        layout === "vertical" 
+          ? "bg-gradient-to-r from-purple-600/20 to-blue-600/20" 
+          : "bg-gradient-to-r from-pink-600/20 to-red-600/20"
+      }`}></div>
     </div>
   );
 };

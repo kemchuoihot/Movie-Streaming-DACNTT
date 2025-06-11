@@ -28,6 +28,7 @@ const Detail = () => {
   const [hasRated, setHasRated] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,7 +55,7 @@ const Detail = () => {
         } catch (err) {
           console.error("Error getting token:", err);
           setIsLoggedIn(false);
-          navigate("/login");
+          navigate("/signin");
         }
       } else {
         setIsLoggedIn(false);
@@ -73,9 +74,9 @@ const Detail = () => {
       const response = await axios.get(`http://localhost:5000/api/movies/${slug}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
-      console.log('Fetched movie data:', response.data); // Log để debug
+      console.log('Fetched movie data:', response.data);
       const movie = response.data.movie;
-      setFilm({ movie }); // Cập nhật film để hiển thị ratings
+      setFilm({ movie });
       const ratings = movie.ratings || [];
       const userRating = ratings.find((r) => r.userId === userId);
       if (userRating) {
@@ -153,7 +154,7 @@ const Detail = () => {
       toast.success("Đánh giá của bạn đã được gửi!");
       setSubmitted(true);
       setHasRated(true);
-      fetchUserRating(auth.currentUser.uid); // Cập nhật lại danh sách bình luận
+      fetchUserRating(auth.currentUser.uid);
       setTimeout(() => setSubmitted(false), 3000);
     } catch (error) {
       console.error("Failed to submit rating:", error);
@@ -165,7 +166,7 @@ const Detail = () => {
 
   const handleToggleFavorite = async () => {
     if (!isLoggedIn) {
-      navigate("/login");
+      navigate("/signin");
       return;
     }
     setFavoriteError("");
@@ -216,7 +217,7 @@ const Detail = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
       toast.success("Bình luận đã được xóa!");
-      fetchUserRating(auth.currentUser.uid); // Cập nhật lại danh sách bình luận
+      fetchUserRating(auth.currentUser.uid);
     } catch (error) {
       console.error("Error deleting rating:", error);
       toast.error("Không thể xóa bình luận. Vui lòng thử lại.");
@@ -224,7 +225,14 @@ const Detail = () => {
   };
 
   if (!film) {
-    return <div className="min-h-screen bg-[#06121e] text-white">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-white text-lg">Đang tải thông tin phim...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -234,73 +242,87 @@ const Detail = () => {
         style={{ backgroundImage: `url(${film.movie.thumb_url})` }}
         className="h-[530px] bg-cover bg-center relative"
       >
-        <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-slate-900/30"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-transparent to-slate-900/60"></div>
       </div>
-      <section className="bg-[#06121e] px-4">
+      
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 px-4">
         <div className="container max-w-screen-xl mx-auto flex flex-col lg:flex-row">
+          {/* Poster và Controls */}
           <div className="w-full lg:w-1/3 mb-8 lg:mb-0 relative -top-80">
-            <LazyLoadImage
-              effect="blur"
-              src={film.movie.poster_url}
-              alt="poster"
-              className="w-full h-auto rounded-lg"
-            />
+            <div className="group relative">
+              <LazyLoadImage
+                effect="blur"
+                src={film.movie.poster_url}
+                alt="poster"
+                className="w-full h-auto rounded-2xl shadow-2xl border-4 border-white/20 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            
+            {/* Nút Xem Ngay */}
             <Link to={`/watch/${slug}`}>
-              <button className="relative w-full mt-10 inline-flex items-center justify-center p-5 px-12 py-3.5 overflow-hidden font-medium text-indigo-600 transition duration-300 ease-out rounded-lg shadow-xl group hover:ring-0 hover:ring-purple-500">
+              <button className="group relative w-full mt-10 inline-flex items-center justify-center p-5 px-12 py-3.5 overflow-hidden font-medium text-white transition duration-300 ease-out rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105">
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-700"></span>
                 <span className="absolute bottom-0 right-0 block w-64 h-64 mb-32 mr-4 transition duration-500 origin-bottom-left transform rotate-45 translate-x-24 bg-pink-500 rounded-full opacity-30 group-hover:rotate-90 ease"></span>
-                <span className="relative text-white text-base font-semibold">
-                  <i className="bx bx-play"></i> Xem Ngay
+                <span className="relative text-white text-lg font-semibold flex items-center">
+                  <i className="bx bx-play-circle text-2xl mr-2"></i>
+                  Xem Ngay
                 </span>
               </button>
             </Link>
+            
+            {/* Nút Yêu thích */}
             <button
               onClick={handleToggleFavorite}
               disabled={isFavoriteLoading}
-              className={`w-full mt-2 py-2 rounded-lg text-white font-semibold transition-colors ${
+              className={`w-full mt-4 py-4 rounded-2xl text-white font-semibold transition-all duration-300 transform hover:scale-105 ${
                 isFavorite
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-indigo-600 hover:bg-indigo-700"
+                  ? "bg-gradient-to-r from-red-500 to-pink-600 shadow-lg hover:shadow-red-500/25"
+                  : "bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20"
               } ${isFavoriteLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {isFavoriteLoading ? (
-                "Loading..."
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Đang xử lý...
+                </div>
               ) : (
-                <>
-                  <i
-                    className={`bx ${
-                      isFavorite ? "bx-heart" : "bxs-heart"
-                    } mr-2`}
-                  ></i>
-                  {isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
-                </>
+                <div className="flex items-center justify-center">
+                  <i className={`bx ${isFavorite ? "bxs-heart" : "bx-heart"} text-xl mr-2`}></i>
+                  {isFavorite ? "Đã yêu thích" : "Thêm vào yêu thích"}
+                </div>
               )}
             </button>
+            
             {favoriteError && (
-              <p className="text-red-500 mt-2 text-center">{favoriteError}</p>
+              <p className="text-red-400 mt-2 text-center bg-red-500/20 p-2 rounded-lg border border-red-500/30">
+                {favoriteError}
+              </p>
             )}
-            <div className="mt-4">
+            
+            {/* Rating Section */}
+            <div className="mt-6 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
               {isLoggedIn ? (
                 <>
                   {hasRated ? (
-                    <div className="text-white text-center mb-4">
-                      Bạn đã đánh giá phim này: {rating} sao{" "}
-                      {comment && (
-                        <>
-                          - "{comment}"
-                          <button
-                            onClick={() => setHasRated(false)}
-                            className="ml-2 text-indigo-500 hover:underline"
-                          >
-                            Sửa đánh giá
-                          </button>
-                        </>
-                      )}
+                    <div className="text-center">
+                      <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-4 border border-green-500/30 mb-4">
+                        <p className="text-white mb-2">Bạn đã đánh giá: {rating} sao</p>
+                        {comment && <p className="text-gray-300 mb-3">"{comment}"</p>}
+                        <button
+                          onClick={() => setHasRated(false)}
+                          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm hover:shadow-lg transition-all duration-300"
+                        >
+                          Sửa đánh giá
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     !submitted && (
-                      <div className="flex flex-col items-center">
-                        <div className="flex justify-center space-x-2 mb-4">
+                      <div className="space-y-4">
+                        <h3 className="text-white font-semibold text-center mb-4">Đánh giá phim</h3>
+                        <div className="flex justify-center space-x-1 mb-4">
                           {[...Array(5)].map((_, i) => {
                             const ratingValue = i + 1;
                             return (
@@ -313,12 +335,9 @@ const Detail = () => {
                                   onChange={() => setRating(ratingValue)}
                                 />
                                 <i
-                                  className="bx bxs-star cursor-pointer text-3xl transition-colors duration-200"
+                                  className="bx bxs-star cursor-pointer text-3xl transition-all duration-200 hover:scale-110"
                                   style={{
-                                    color:
-                                      ratingValue <= (hover || rating)
-                                        ? "#ffc107"
-                                        : "#e4e5e9",
+                                    color: ratingValue <= (hover || rating) ? "#ffc107" : "#4a5568",
                                   }}
                                   onMouseEnter={() => setHover(ratingValue)}
                                   onMouseLeave={() => setHover(null)}
@@ -327,133 +346,216 @@ const Detail = () => {
                             );
                           })}
                         </div>
-                        <form onSubmit={handleSubmit} className="w-full max-w-md">
+                        <form onSubmit={handleSubmit} className="space-y-4">
                           <textarea
-                            className="w-full h-24 p-2 bg-gray-800 text-white rounded-lg resize-none focus:ring-2 focus:ring-indigo-600"
-                            placeholder="Describe your experience..."
+                            className="w-full h-24 p-3 bg-white/10 text-white rounded-xl border border-white/20 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none backdrop-blur placeholder-gray-400"
+                            placeholder="Chia sẻ cảm nhận của bạn..."
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
                           ></textarea>
                           <button
                             type="submit"
-                            className="mt-2 w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105"
                           >
-                            Post
+                            Gửi đánh giá
                           </button>
                         </form>
                       </div>
                     )
                   )}
                   {submitted && (
-                    <div className="text-white text-center mb-4">
-                      Thanks for your feedback!
+                    <div className="text-center py-4">
+                      <i className="bx bx-check-circle text-3xl text-green-400 mb-2"></i>
+                      <p className="text-white">Cảm ơn bạn đã đánh giá!</p>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="text-white text-center mt-4">
-                  Please{" "}
-                  <Link to="/login" className="text-indigo-500 hover:underline">
-                    log in
-                  </Link>{" "}
-                  to rate this film.
+                <div className="text-center py-4">
+                  <i className="bx bx-user-circle text-3xl text-gray-400 mb-2"></i>
+                  <p className="text-gray-300 mb-3">Vui lòng đăng nhập để đánh giá</p>
+                  <Link
+                    to="/signin"
+                    className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm hover:shadow-lg transition-all duration-300"
+                  >
+                    Đăng nhập
+                  </Link>
                 </div>
               )}
             </div>
           </div>
+          
+          {/* Thông tin phim */}
           <div className="w-full lg:pl-12">
             <div className="relative -top-72">
-              <h1 className="text-4xl text-white font-bold font-[Montserrat]">
+              <h1 className="text-4xl text-white font-bold font-[Montserrat] mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-200 to-pink-200">
                 {film.movie.origin_name}
               </h1>
-              <h1 className="text-xl text-gray-300 font-light mt-4">
+              <h2 className="text-xl text-gray-300 font-light mt-4">
                 {film.movie.name}
-              </h1>
+              </h2>
               <h5 className="text-2xl text-white mt-2">({film.movie.year})</h5>
-              <h4 className="text-lg text-white mt-2">
-                {film.movie.time}{" "}
-                <span className="bg-yellow-500 text-black px-2 py-1 rounded ml-10">
-                  IMDB
-                </span>{" "}
-                <i className="bx bxs-star"></i>{" "}
-                {film.movie.tmdb.vote_average === 0
-                  ? "Chưa có đánh giá"
-                  : film.movie.tmdb.vote_average}
-              </h4>
-              <div className="flex justify-between">
-                <h3 className="text-lg text-white mt-2 mr-4">
-                  <span className="">Đạo diễn:</span> {film.movie.director[0]}
-                </h3>
-                <h3 className="text-lg text-white mt-2 mr-4">
-                  <span className="">Diễn viên:</span>{" "}
-                  {film.movie.actor[0] + ", " + film.movie.actor[1] + "..."}
-                </h3>
+              
+              <div className="flex flex-wrap items-center gap-4 mt-4">
+                <span className="text-lg text-white">{film.movie.time}</span>
+                <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 rounded-full font-bold flex items-center">
+                  <i className="bx bxs-star mr-1"></i>
+                  {film.movie.tmdb.vote_average === 0 ? "N/A" : film.movie.tmdb.vote_average}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+                <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
+                  <h3 className="text-white font-semibold mb-2 flex items-center">
+                    <i className="bx bx-user mr-2 text-purple-400"></i>
+                    Đạo diễn:
+                  </h3>
+                  <p className="text-gray-300">{film.movie.director[0]}</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
+                  <h3 className="text-white font-semibold mb-2 flex items-center">
+                    <i className="bx bx-group mr-2 text-pink-400"></i>
+                    Diễn viên:
+                  </h3>
+                  <p className="text-gray-300">
+                    {film.movie.actor[0] + ", " + film.movie.actor[1] + "..."}
+                  </p>
+                </div>
               </div>
             </div>
+            
             <div className="relative -top-60">
-              <h4 className="text-xl text-white mt-2">{film.movie.genre}</h4>
-              <p className="text-base text-gray-300 mt-20">{film.movie?.content}</p>
-              <div className="mt-8">
-                <span className="text-xl text-white">Trailer:</span>
+              <div className="mb-6">
+                <h4 className="text-xl text-white mb-3 flex items-center">
+                  <i className="bx bx-category mr-2 text-blue-400"></i>
+                  Thể loại:
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {film.movie.genre.split(', ').map((genre, index) => (
+                    <span
+                      key={index}
+                      className="bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-white px-3 py-1 rounded-full border border-purple-500/30 text-sm"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 mb-8">
+                <h3 className="text-xl text-white font-semibold mb-4">Nội dung phim</h3>
+                <p className="text-gray-300 leading-relaxed">{film.movie?.content}</p>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl text-white font-semibold">Trailer</h3>
+                  <button
+                    onClick={() => setIsTrailerOpen(true)}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm hover:shadow-lg transition-all duration-300"
+                  >
+                    Xem toàn màn hình
+                  </button>
+                </div>
                 <iframe
                   title="Movie Trailer"
-                  className="w-full h-56 sm:w-4/5 sm:h-[420px] mt-4"
+                  className="w-full h-56 sm:h-[420px] rounded-xl"
                   src={`https://youtube.com/embed/${trailerId}`}
                   allowFullScreen
                 ></iframe>
               </div>
             </div>
-            {/* Phần hiển thị danh sách đánh giá và bình luận */}
+            
+            {/* Danh sách đánh giá */}
             {film.movie.ratings && film.movie.ratings.length > 0 && (
-              <div className="mt-10">
-                <h2 className="text-2xl text-white font-bold mb-4">
-                  Đánh giá và Bình luận
+              <div className="mb-10 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
+                <h2 className="text-2xl text-white font-bold mb-6 flex items-center">
+                  <i className="bx bx-message-square-dots mr-2 text-purple-400"></i>
+                  Đánh giá & Bình luận ({film.movie.ratings.length})
                 </h2>
-                {film.movie.ratings.map((rating, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-800 p-4 rounded-lg mb-4 text-white relative"
-                  >
-                    <p>
-                      <strong>Tên người dùng:</strong>{" "}
-                      {rating.displayName || "Người dùng ẩn danh"}
-                    </p>
-                    <p>
-                      <strong>Rating:</strong>{" "}
-                      {[...Array(5)].map((_, i) => (
-                        <i
-                          key={i}
-                          className="bx bxs-star text-xl"
-                          style={{
-                            color: i < rating.rating ? "#ffc107" : "#e4e5e9",
-                          }}
-                        ></i>
-                      ))}
-                    </p>
-                    {rating.comment && (
-                      <p>
-                        <strong>Bình luận:</strong> {rating.comment}
-                      </p>
-                    )}
-                    <p>
-                      <strong>Thời gian:</strong>{" "}
-                      {new Date(rating.createdAt).toLocaleString()}
-                    </p>
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteRating(rating.userId)}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                      >
-                        <i className="bx bx-trash"></i>
-                      </button>
-                    )}
-                  </div>
-                ))}
+                <div className="space-y-6">
+                  {film.movie.ratings.map((ratingItem, index) => (
+                    <div
+                      key={index}
+                      className="bg-white/5 rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300 relative group"
+                    >
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow-lg">
+                            {ratingItem.displayName ? ratingItem.displayName.charAt(0) : "U"}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-white text-lg">
+                              {ratingItem.displayName || "Người dùng ẩn danh"}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(ratingItem.createdAt).toLocaleDateString('vi-VN')}
+                            </span>
+                          </div>
+                          {ratingItem.comment && (
+                            <p className="text-gray-300 mb-3 leading-relaxed">"{ratingItem.comment}"</p>
+                          )}
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <i
+                                key={i}
+                                className="bx bxs-star text-xl"
+                                style={{
+                                  color: i < ratingItem.rating ? "#ffc107" : "#4a5568",
+                                }}
+                              ></i>
+                            ))}
+                            <span className="ml-2 text-sm text-gray-400 font-semibold">
+                              {ratingItem.rating}/5
+                            </span>
+                          </div>
+                        </div>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteRating(ratingItem.userId)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-red-500/20"
+                            title="Xóa bình luận"
+                          >
+                            <i className="bx bx-trash text-xl"></i>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
       </section>
+
+      {/* Trailer Modal */}
+      {isTrailerOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white/10 backdrop-blur rounded-2xl p-6 w-full max-w-4xl mx-4 border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-white">Trailer - {film.movie.name}</h3>
+              <button
+                onClick={() => setIsTrailerOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+              >
+                <i className="bx bx-x text-3xl"></i>
+              </button>
+            </div>
+            <div className="aspect-video">
+              <iframe
+                title="Movie Trailer"
+                className="w-full h-full rounded-xl"
+                src={`https://youtube.com/embed/${trailerId}?autoplay=1`}
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );

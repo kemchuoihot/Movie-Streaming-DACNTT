@@ -36,6 +36,7 @@ const checkAdmin = async (req, res, next) => {
     res.status(500).json({ message: 'Error checking admin status', error: error.message });
   }
 };
+
 router.post('/:slug/rating', authenticate, async (req, res) => {
   try {
     const { slug } = req.params;
@@ -138,6 +139,53 @@ router.post("/favorites", authenticate, async (req, res) => {
   } catch (error) {
     console.error("Error adding favorite:", error);
     res.status(500).json({ message: "Error adding favorite", error: error.message });
+  }
+});
+
+router.get("/top-rated", async (req, res) => {
+  try {
+    const topRatedMovie = await Movie.findOne()
+      .sort({ rating: -1 }) // Sắp xếp giảm dần theo rating
+      .limit(1); // Lấy 1 phim có rating cao nhất
+    if (!topRatedMovie) {
+      return res.status(404).json({ status: "error", message: "No movies found" });
+    }
+    res.json({
+      status: "success",
+      movie: {
+        name: topRatedMovie.name,
+        slug: topRatedMovie.slug,
+        thumb_url: topRatedMovie.thumbUrl,
+        poster_url: topRatedMovie.posterUrl,
+        year: topRatedMovie.year,
+        rating: topRatedMovie.rating,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching top rated movie:", error);
+    res.status(500).json({ status: "error", message: "Error fetching top rated movie" });
+  }
+});
+
+router.get("/top-viewed", async (req, res) => {
+  try {
+    const topMovies = await Movie.find()
+      .sort({ views: -1 }) // Sắp xếp giảm dần theo views
+      .limit(5); // Lấy top 5
+    res.json({
+      status: "success",
+      items: topMovies.map((movie) => ({
+        name: movie.name,
+        slug: movie.slug,
+        thumb_url: movie.thumbUrl,
+        poster_url: movie.posterUrl,
+        year: movie.year,
+        views: movie.views,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching top viewed movies:", error);
+    res.status(500).json({ status: "error", message: "Error fetching top movies" });
   }
 });
 
@@ -453,5 +501,42 @@ router.get('/:slug', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Error fetching movie', error: error.message });
   }
 });
+
+
+router.put("/:slug/view", async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const movie = await Movie.findOneAndUpdate(
+      { slug },
+      {
+        $inc: { views: 1 }, // Tăng views lên 1
+        $push: { viewHistory: { timestamp: new Date(), count: 1 } }, // Thêm vào lịch sử xem
+      },
+      { new: true, runValidators: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    if (!movie) {
+      return res.status(404).json({ status: "error", message: "Movie not found" });
+    }
+
+    res.json({
+      status: "success",
+      message: "View incremented successfully",
+      movie: {
+        slug: movie.slug,
+        views: movie.views,
+      },
+    });
+  } catch (error) {
+    console.error("Error incrementing view:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Error incrementing view",
+      error: error.message,
+    });
+  }
+});
+
 
 module.exports = router;
