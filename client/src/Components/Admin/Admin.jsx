@@ -41,7 +41,7 @@ const Admin = () => {
   const [movies, setMovies] = useState([]);
   const [isMoviePopupOpen, setIsMoviePopupOpen] = useState(false);
   const [editMovie, setEditMovie] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Dùng cho các hành động chung (login, submit, delete)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
 
@@ -66,6 +66,13 @@ const Admin = () => {
 
   const [movieForm, setMovieForm] = useState(initialMovieState);
   const [form, setForm] = useState({ email: '', isAdmin: false });
+  const [videoFile, setVideoFile] = useState(null); // State để lưu file video được chọn
+  const [uploadingVideo, setUploadingVideo] = useState(false); // State riêng cho quá trình upload video
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setMovieForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -263,6 +270,48 @@ const Admin = () => {
     } else {
       setMovieForm({ ...movieForm, [name]: value });
     }
+  };
+
+  const handleFileChange = (e) => {
+    setVideoFile(e.target.files[0]);
+  };
+
+  const handleUploadVideo = async () => {
+    if (!videoFile) {
+      toast.error('Vui lòng chọn một file video để tải lên.');
+      return;
+    }
+
+    setUploadingVideo(true); // Bắt đầu trạng thái tải lên
+    const formData = new FormData();
+    formData.append('video', videoFile);
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/upload/video', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      setMovieForm((prev) => ({ ...prev, videoUrl: response.data.url }));
+      toast.success('Tải video thành công!');
+      setVideoFile(null); // Clear the selected file after successful upload
+    } catch (err) {
+      console.error('Upload video error:', err);
+      toast.error(err.response?.data?.message || 'Tải video thất bại!');
+    } finally {
+      setUploadingVideo(false); // Kết thúc trạng thái tải lên
+    }
+  };
+
+  const handleVideoDrop = async (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('video/')) {
+      toast.error('Vui lòng thả file video hợp lệ.');
+      return;
+    }
+    setVideoFile(file); // Set file to state for upload
   };
 
   // Stats calculations
@@ -901,7 +950,7 @@ const Admin = () => {
                     <input
                       name="genres"
                       placeholder="Hành Động, Khoa Học Viễn Tưởng, Phiêu Lưu"
-                      value={movieForm.genres.join(', ')}
+                      value={Array.isArray(movieForm.genres) ? movieForm.genres.join(', ') : movieForm.genres}
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
                     />
@@ -911,7 +960,7 @@ const Admin = () => {
                     <input
                       name="directors"
                       placeholder="Lana Wachowski, Lilly Wachowski"
-                      value={movieForm.directors.join(', ')}
+                      value={Array.isArray(movieForm.directors) ? movieForm.directors.join(', ') : movieForm.directors}
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
                     />
@@ -921,7 +970,7 @@ const Admin = () => {
                     <input
                       name="actors"
                       placeholder="Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss"
-                      value={movieForm.actors.join(', ')}
+                      value={Array.isArray(movieForm.actors) ? movieForm.actors.join(', ') : movieForm.actors}
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
                     />
@@ -967,8 +1016,10 @@ const Admin = () => {
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
                     />
                   </div>
+
+                  {/* Video Upload Section - Modified */}
                   <div>
-                    <label className="block text-white mb-2 font-medium">URL Video</label>
+                    <label className="block text-white mb-2 font-medium">Video URL (HLS)</label>
                     <input
                       name="videoUrl"
                       placeholder="https://example.com/video.m3u8"
@@ -976,15 +1027,53 @@ const Admin = () => {
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
                     />
+                     {/* Input file ẩn */}
+                    <input
+                      id="videoFileInput"
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleFileChange} // Sử dụng handleFileChange để set videoFile
+                    />
+                    <div
+                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-dashed border-white/20 hover:border-blue-500 transition-colors text-sm mb-2 text-center cursor-pointer mt-4"
+                      onDrop={handleVideoDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                      onClick={() => document.getElementById('videoFileInput').click()}
+                    >
+                      {videoFile ? `File đã chọn: ${videoFile.name}` : 'Kéo và thả file video tại đây hoặc nhấn để chọn từ máy'}
+                    </div>
+                   
+                    {/* Nút upload video */}
+                    <button
+                      type="button"
+                      onClick={handleUploadVideo}
+                      disabled={uploadingVideo || !videoFile} // Disable khi đang upload hoặc chưa chọn file
+                      className={`w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center ${
+                        uploadingVideo || !videoFile ? 'opacity-60 cursor-not-allowed' : 'hover:from-green-600 hover:to-teal-700'
+                      } mt-2`}
+                    >
+                      {uploadingVideo ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Đang tải lên và xử lý...
+                        </div>
+                      ) : (
+                        <>
+                          <i className="bx bx-upload mr-2"></i>
+                          Tải lên video
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
                 <div className="flex gap-4 pt-4">
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || uploadingVideo} // Disable khi đang upload video hoặc các tác vụ khác
                     className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 ${
-                      loading ? 'opacity-60 cursor-not-allowed' : 'hover:from-blue-600 hover:to-purple-700'
+                      loading || uploadingVideo ? 'opacity-60 cursor-not-allowed' : 'hover:from-blue-600 hover:to-purple-700'
                     }`}
                   >
                     {loading ? (
@@ -998,7 +1087,11 @@ const Admin = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsMoviePopupOpen(false)}
+                    onClick={() => {
+                      setIsMoviePopupOpen(false);
+                      setVideoFile(null); // Clear file selection on close
+                      setUploadingVideo(false); // Reset upload status
+                    }}
                     className="px-8 bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
                   >
                     Hủy
