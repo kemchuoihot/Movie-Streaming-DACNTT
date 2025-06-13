@@ -41,7 +41,7 @@ const Admin = () => {
   const [movies, setMovies] = useState([]);
   const [isMoviePopupOpen, setIsMoviePopupOpen] = useState(false);
   const [editMovie, setEditMovie] = useState(null);
-  const [loading, setLoading] = useState(false); // Dùng cho các hành động chung (login, submit, delete)
+  const [loading, setLoading] = useState(false); 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
 
@@ -66,6 +66,7 @@ const Admin = () => {
 
   const [movieForm, setMovieForm] = useState(initialMovieState);
   const [form, setForm] = useState({ email: '', isAdmin: false });
+  const [conversionProgress, setConversionProgress] = useState(0);
   const [videoFile, setVideoFile] = useState(null); // State để lưu file video được chọn
   const [uploadingVideo, setUploadingVideo] = useState(false); // State riêng cho quá trình upload video
 
@@ -281,38 +282,45 @@ const Admin = () => {
       toast.error('Vui lòng chọn một file video để tải lên.');
       return;
     }
-
-    setUploadingVideo(true); // Bắt đầu trạng thái tải lên
+  
+    setUploadingVideo(true);
+    setConversionProgress(0);
+  
     const formData = new FormData();
     formData.append('video', videoFile);
-
+  
+    let fakeProgress = 0;
+    const progressInterval = setInterval(() => {
+      fakeProgress += Math.random() * 5; 
+      if (fakeProgress >= 70) return; 
+      setConversionProgress(Math.floor(fakeProgress));
+    }, 100);
+  
     try {
       const response = await axios.post('http://localhost:5000/api/upload/video', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-        },
+        }
       });
+  
+      setConversionProgress(100); // chốt hoàn tất
       setMovieForm((prev) => ({ ...prev, videoUrl: response.data.url }));
       toast.success('Tải video thành công!');
-      setVideoFile(null); // Clear the selected file after successful upload
+      setVideoFile(null);
     } catch (err) {
       console.error('Upload video error:', err);
       toast.error(err.response?.data?.message || 'Tải video thất bại!');
     } finally {
-      setUploadingVideo(false); // Kết thúc trạng thái tải lên
+      clearInterval(progressInterval); 
+      setTimeout(() => {
+        setUploadingVideo(false);
+        setConversionProgress(0); // reset 
+      }, 1500);
     }
   };
 
-  const handleVideoDrop = async (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (!file || !file.type.startsWith('video/')) {
-      toast.error('Vui lòng thả file video hợp lệ.');
-      return;
-    }
-    setVideoFile(file); // Set file to state for upload
-  };
+  
 
   // Stats calculations
   const totalUsers = users.length;
@@ -1027,44 +1035,54 @@ const Admin = () => {
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"
                     />
-                     {/* Input file ẩn */}
-                    <input
-                      id="videoFileInput"
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      onChange={handleFileChange} // Sử dụng handleFileChange để set videoFile
-                    />
-                    <div
-                      className="w-full p-3 bg-white/10 text-white rounded-lg border border-dashed border-white/20 hover:border-blue-500 transition-colors text-sm mb-2 text-center cursor-pointer mt-4"
-                      onDrop={handleVideoDrop}
-                      onDragOver={(e) => e.preventDefault()}
-                      onClick={() => document.getElementById('videoFileInput').click()}
-                    >
-                      {videoFile ? `File đã chọn: ${videoFile.name}` : 'Kéo và thả file video tại đây hoặc nhấn để chọn từ máy'}
-                    </div>
-                   
-                    {/* Nút upload video */}
-                    <button
-                      type="button"
-                      onClick={handleUploadVideo}
-                      disabled={uploadingVideo || !videoFile} // Disable khi đang upload hoặc chưa chọn file
-                      className={`w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center ${
-                        uploadingVideo || !videoFile ? 'opacity-60 cursor-not-allowed' : 'hover:from-green-600 hover:to-teal-700'
-                      } mt-2`}
-                    >
-                      {uploadingVideo ? (
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Đang tải lên và xử lý...
+                     {/* input file ẩn */}
+                      <input
+                        type="file"
+                        id="videoFileInput"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+
+                      <div
+                        onClick={() => document.getElementById('videoFileInput').click()}
+                        className="bg-white/10 border border-dashed border-white/20 text-white text-center p-3 mt-4 rounded-lg cursor-pointer"
+                      >
+                        {videoFile ? `Đã chọn: ${videoFile.name}` : 'Kéo & thả hoặc nhấn để chọn file video'}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleUploadVideo}
+                        disabled={uploadingVideo || !videoFile}
+                        className={`w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 rounded-lg mt-4 font-semibold transition-all duration-300 ${
+                          uploadingVideo || !videoFile ? 'opacity-60 cursor-not-allowed' : 'hover:from-green-600 hover:to-teal-700'
+                        }`}
+                      >
+                        {uploadingVideo ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Đang tải lên và xử lý...
+                          </div>
+                        ) : (
+                          <>
+                            <i className="bx bx-upload mr-2"></i>
+                            Tải lên video
+                          </>
+                        )}
+                      </button>
+
+                      {/* ✅ Hiển thị tiến trình nếu đang upload */}
+                      {uploadingVideo && (
+                        <div className="w-full bg-white/10 rounded-full h-4 mt-4 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-pink-500 to-purple-500 h-full text-xs text-white text-center leading-4 transition-all duration-300"
+                            style={{ width: `${conversionProgress}%` }}
+                          >
+                            {conversionProgress}%
+                          </div>
                         </div>
-                      ) : (
-                        <>
-                          <i className="bx bx-upload mr-2"></i>
-                          Tải lên video
-                        </>
                       )}
-                    </button>
                   </div>
                 </div>
 
@@ -1072,8 +1090,8 @@ const Admin = () => {
                   <button
                     type="submit"
                     disabled={loading || uploadingVideo} // Disable khi đang upload video hoặc các tác vụ khác
-                    className={`flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 ${
-                      loading || uploadingVideo ? 'opacity-60 cursor-not-allowed' : 'hover:from-blue-600 hover:to-purple-700'
+                    className={`flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold transition-all duration-300 ${
+                      loading || uploadingVideo ? 'opacity-60 cursor-not-allowed' : 'hover:from-purlpe-700 hover:to-pink-800'
                     }`}
                   >
                     {loading ? (
