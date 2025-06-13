@@ -28,6 +28,132 @@ const Main = () => {
   const historyScrollRef = useRef(null);
   const [topViewedMovies, setTopViewedMovies] = useState([]);
   const [topRatedMovie, setTopRatedMovie] = useState(null);
+  
+  // New state for recommendations
+  const [recommendedMovies, setRecommendedMovies] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  // Recommendation algorithm
+  const generateRecommendations = async (userHistory, userFavorites, allMovies) => {
+    try {
+      setLoadingRecommendations(true);
+      
+      // Get user's preferred genres from history and favorites
+      const watchedMovies = [...userHistory, ...userFavorites.map(slug => ({ slug }))];
+      const genrePreferences = {};
+      const countryPreferences = {};
+      const yearPreferences = {};
+      
+      // Analyze user preferences
+      for (const item of watchedMovies) {
+        try {
+          const movieDetails = await fetchMovieDetails(item.slug);
+          if (movieDetails && movieDetails.movie) {
+            const movie = movieDetails.movie;
+            
+            // Count genres
+            if (movie.category) {
+              movie.category.forEach(cat => {
+                genrePreferences[cat.name] = (genrePreferences[cat.name] || 0) + 1;
+              });
+            }
+            
+            // Count countries
+            if (movie.country) {
+              movie.country.forEach(country => {
+                countryPreferences[country.name] = (countryPreferences[country.name] || 0) + 1;
+              });
+            }
+            
+            // Count years (prefer recent movies)
+            if (movie.year) {
+              const yearRange = Math.floor(movie.year / 5) * 5; // Group by 5-year ranges
+              yearPreferences[yearRange] = (yearPreferences[yearRange] || 0) + 1;
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching details for ${item.slug}:`, err);
+        }
+      }
+      
+      // Get top preferences
+      const topGenres = Object.entries(genrePreferences)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3)
+        .map(([genre]) => genre);
+      
+      const topCountries = Object.entries(countryPreferences)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 2)
+        .map(([country]) => country);
+      
+      // Filter movies based on preferences
+      const watchedSlugs = new Set([...userHistory.map(h => h.slug), ...userFavorites]);
+      const candidates = allMovies.filter(movie => !watchedSlugs.has(movie.slug));
+      
+      // Score movies based on preferences
+      const scoredMovies = await Promise.all(
+        candidates.slice(0, 50).map(async (movie) => { // Limit to first 50 for performance
+          try {
+            const details = await fetchMovieDetails(movie.slug);
+            if (!details || !details.movie) return null;
+            
+            const movieData = details.movie;
+            let score = 0;
+            
+            // Genre matching (highest weight)
+            if (movieData.category) {
+              const movieGenres = movieData.category.map(cat => cat.name);
+              const genreMatches = movieGenres.filter(genre => topGenres.includes(genre));
+              score += genreMatches.length * 3;
+            }
+            
+            // Country matching
+            if (movieData.country) {
+              const movieCountries = movieData.country.map(country => country.name);
+              const countryMatches = movieCountries.filter(country => topCountries.includes(country));
+              score += countryMatches.length * 2;
+            }
+            
+            // Prefer newer movies
+            if (movieData.year) {
+              const currentYear = new Date().getFullYear();
+              const yearDiff = currentYear - movieData.year;
+              if (yearDiff <= 3) score += 2;
+              else if (yearDiff <= 5) score += 1;
+            }
+            
+            // Boost high-quality movies
+            if (movieData.quality && (movieData.quality.includes('HD') || movieData.quality.includes('FHD'))) {
+              score += 1;
+            }
+            
+            return {
+              ...movie,
+              score,
+              details: movieData
+            };
+          } catch (err) {
+            return null;
+          }
+        })
+      );
+      
+      // Filter out null results and sort by score
+      const validMovies = scoredMovies
+        .filter(movie => movie !== null && movie.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+      
+      setRecommendedMovies(validMovies);
+      
+    } catch (error) {
+      console.error("Error generating recommendations:", error);
+      setRecommendedMovies([]);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -48,6 +174,13 @@ const Main = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Generate recommendations when user data is loaded
+  useEffect(() => {
+    if (user && history.length > 0 && data.length > 0) {
+      generateRecommendations(history, favorites, data);
+    }
+  }, [user, history, favorites, data]);
 
   const fetchHistory = async (token) => {
     try {
@@ -426,19 +559,35 @@ const Main = () => {
         </div>
       )}
 
-      {/* New Movies Section */}
-      {data.length > 0 && (
-        <Section
-          title="PHIM MỚI CẬP NHẬT"
-          movies={data.slice(0, 10)}
-          link="/category/all/1"
-          favorites={favorites}
-          layout="horizontal"
-        />
+      {/* Recommendations Section */}
+      {user && recommendedMovies.length > 0 && (
+        <div className="bg-gradient-to-br from-slate-900 via-gray-800 to-slate-900 py-8 lg:py-16">
+          <div className="max-w-screen-xl mx-auto">
+            <Section
+              title="ĐỀ XUẤT CHO BẠN"
+              subtitle="Dựa trên sở thích và lịch sử xem phim của bạn"
+              movies={recommendedMovies}
+              link="/recommendations"
+              favorites={favorites}
+              layout="horizontal"
+            />
+          </div>
+        </div>
       )}
+      {user && !loadingRecommendations && recommendedMovies.length === 0 && history.length > 0 && (
+              <div className="text-center py-12">
+                <i className="bx bx-movie-play text-6xl text-gray-500 mb-4"></i>
+                <h3 className="text-xl font-semibold text-gray-300 mb-2">
+                  Đang chuẩn bị đề xuất cho bạn
+                </h3>
+                <p className="text-gray-400">
+                  Hãy xem thêm một vài bộ phim để chúng tôi hiểu rõ sở thích của bạn hơn!
+                </p>
+              </div>
+            )}
 
       {/* Top Movies Section */}
-      <div className="bg-gradient-to-br from-slate-900 via-gray-800 to-slate-900 py-12 lg:py-20">
+      <div className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-900 py-12 lg:py-20">
         <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 lg:gap-12">
             {/* Top Viewed Movies */}
