@@ -36,34 +36,45 @@ const CategoryPage = () => {
   const [viewMode, setViewMode] = useState('grid'); // grid or list
 
   useEffect(() => {
-    const fetchCategoryMovies = async () => {
-      setLoading(true);
-      try {
-        let url = "";
-        if (category === "all") {
-          url = "http://localhost:5000/api/movies/new";
-        } else {
-          url = `http://localhost:5000/api/movies/category/${category}`;
-        }
-        const res = await axios.get(url, {
-          params: { page: currentPage, limit: 18 },
-        });
-        
-        const data = res.data.items || (res.data.data && res.data.data.items) || [];
-        setMovies(data);
-        
-        // Calculate total pages (assuming 18 items per page)
-        const total = res.data.totalItems || res.data.data?.totalItems || data.length;
-        setTotalPages(Math.ceil(total / 18));
-      } catch (err) {
-        console.error("Error fetching movies:", err);
-        setMovies([]);
-      } finally {
-        setLoading(false);
+  const fetchCategoryMovies = async () => {
+    setLoading(true);
+    try {
+      let url = "";
+      if (category === "all") {
+        url = "http://localhost:5000/api/movies/new";
+      } else {
+        url = `http://localhost:5000/api/movies/category/${category}`;
       }
-    };
-    fetchCategoryMovies();
-  }, [category, currentPage]);
+      const res = await axios.get(url, {
+        params: { page: currentPage, limit: 18 },
+      });
+      
+      // Handle different response structures
+      let data = [];
+      let total = 0;
+      
+      if (category === "all") {
+        // For /new endpoint
+        data = res.data.items || [];
+        total = res.data.totalItems || data.length;
+      } else {
+        // For /category endpoint
+        data = res.data.items || (res.data.data && res.data.data.items) || [];
+        total = res.data.totalItems || res.data.data?.totalItems || data.length;
+      }
+      
+      setMovies(data);
+      setTotalPages(Math.ceil(total / 18));
+      
+    } catch (err) {
+      console.error("Error fetching movies:", err);
+      setMovies([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchCategoryMovies();
+}, [category, currentPage]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -254,9 +265,6 @@ const CategoryPage = () => {
                         
                         {/* Badges */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                            HD
-                          </span>
                           {item.year && (
                             <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-2 py-1 rounded-full">
                               {item.year}

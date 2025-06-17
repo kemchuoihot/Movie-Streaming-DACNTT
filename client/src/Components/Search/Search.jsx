@@ -211,9 +211,6 @@ const SearchResults = () => {
                         
                         {/* Badges */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                            HD
-                          </span>
                           {movie.year && (
                             <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-2 py-1 rounded-full">
                               {movie.year}

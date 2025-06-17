@@ -158,6 +158,7 @@ router.get("/top-rated", async (req, res) => {
         thumb_url: topRatedMovie.thumbUrl,
         poster_url: topRatedMovie.posterUrl,
         year: topRatedMovie.year,
+        quality: topRatedMovie.quality || "HD",
         rating: topRatedMovie.rating,
       },
     });
@@ -179,6 +180,7 @@ router.get("/top-viewed", async (req, res) => {
         slug: movie.slug,
         thumb_url: movie.thumbUrl,
         poster_url: movie.posterUrl,
+        quality: movie.quality || "HD",
         year: movie.year,
         views: movie.views,
       })),
@@ -276,6 +278,7 @@ router.get("/history", authenticate, async (req, res) => {
         posterUrl: entry.movie.posterUrl,
         stoppedAt: entry.stoppedAt,
         lastWatched: entry.lastWatched,
+        quality: entry.movie.quality || "HD",
         duration: parseDuration(entry.movie.time),
       }))
       .sort((a, b) => b.lastWatched - a.lastWatched);
@@ -307,10 +310,17 @@ function parseDuration(time) {
 
 // Lấy danh sách phim mới cập nhật
 router.get('/new', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 18; // Matching với frontend limit
+  const skip = (page - 1) * limit;
+
   try {
+    const totalItems = await Movie.countDocuments();
     const movies = await Movie.find()
       .sort({ createdAt: -1 })
-      .limit(20);
+      .skip(skip)
+      .limit(limit);
+
     res.json({
       status: 'success',
       items: movies.map((movie) => ({
@@ -320,14 +330,24 @@ router.get('/new', async (req, res) => {
         poster_url: movie.posterUrl,
         year: movie.year,
         time: movie.time,
+        quality: movie.quality || 'HD',
         genre: movie.genres.join(', '),
       })),
+      totalItems,
+      currentPage: page,
+      totalPages: Math.ceil(totalItems / limit),
+      pagination: {
+        totalItems,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+      }
     });
   } catch (error) {
     console.error("Error fetching new movies:", error);
     res.status(500).json({ status: 'error', message: 'Error fetching movies', error: error.message });
   }
 });
+
 
 // Lấy phim theo danh mục
 router.get('/category/:category', async (req, res) => {
@@ -362,6 +382,7 @@ router.get('/category/:category', async (req, res) => {
           poster_url: movie.posterUrl,
           year: movie.year,
           time: movie.time,
+          quality: movie.quality || 'HD',
           genre: movie.genres.join(', '),
         })),
         pagination: {
@@ -395,6 +416,7 @@ router.get('/search', async (req, res) => {
           poster_url: movie.posterUrl,
           year: movie.year,
           time: movie.time,
+          quality: movie.quality || 'HD',
           genre: movie.genres.join(', '),
         })),
       },

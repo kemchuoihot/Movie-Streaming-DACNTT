@@ -509,9 +509,7 @@ const Main = () => {
                             <i className="bx bxs-heart"></i>
                           </span>
                         )}
-                        <span className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                          HD
-                        </span>
+                        
                         
                         {/* Progress Bar */}
                         <div className="absolute bottom-2 left-2 right-2">

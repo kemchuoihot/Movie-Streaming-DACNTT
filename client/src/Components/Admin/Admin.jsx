@@ -917,11 +917,11 @@ const Admin = () => {
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg"
                     >
-                      <option value="">Chọn chất lượng</option>
-                      <option value="HD">HD</option>
-                      <option value="Full HD">Full HD</option>
-                      <option value="4K">4K</option>
-                      <option value="CAM">CAM</option>
+                      <option className='bg-black' value="">Chọn chất lượng</option>
+                      <option className='bg-black' value="HD">HD</option>
+                      <option className='bg-black' value="Full HD">Full HD</option>
+                      <option className='bg-black' value="4K">4K</option>
+                      <option className='bg-black' value="CAM">CAM</option>
                     </select>
                   </div>
                   <div>
@@ -932,19 +932,19 @@ const Admin = () => {
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg"
                     >
-                      <option value="completed">Hoàn thành</option>
-                      <option value="ongoing">Đang chiếu</option>
+                      <option className='bg-black' value="completed" >Hoàn thành</option>
+                      <option className='bg-black' value="ongoing">Đang chiếu</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-white mb-2 font-medium">Đánh giá (0-10)</label>
+                    <label className="block text-white mb-2 font-medium">Đánh giá (0-5)</label>
                     <input
                       name="rating"
                       type="number"
                       step="0.1"
                       min="0"
-                      max="10"
-                      placeholder="8.7"
+                      max="5"
+                      placeholder="4.5"
                       value={movieForm.rating}
                       onChange={handleMovieChange}
                       className="w-full p-3 bg-white/10 text-white rounded-lg border border-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-lg placeholder-gray-400"

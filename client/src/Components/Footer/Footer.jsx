@@ -20,7 +20,7 @@ const Footer = () => {
               </div>
               <div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  MovieHub
+                  CityMovie
                 </span>
                 <p className="text-white/60 text-sm">Xem phim HD miễn phí</p>
               </div>
