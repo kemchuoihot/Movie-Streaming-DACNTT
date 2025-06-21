@@ -7,32 +7,58 @@ const admin = require('firebase-admin');
 dotenv.config();
 const app = express();
 
+// CORS cho production - CHỈ SỬA PHẦN NÀY
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  // Support multiple origins for production
+  const allowedOrigins = [
+    'http://localhost:3000',
+    process.env.FRONTEND_URL // Sẽ set này trên Railway
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    res.header('Access-Control-Allow-Origin', origin || 'http://localhost:3000');
+  }
+  
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
-// Khởi tạo Firebase Admin
-const serviceAccount = require(process.env.FIREBASE_CREDENTIALS_PATH || './film-demo-b3215-firebase-adminsdk-fbsvc-52da389e4c.json');
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// Firebase Admin - SỬA CHO PRODUCTION
+let serviceAccount;
+try {
+  if (process.env.NODE_ENV === 'production' && process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    // Production: parse from environment variable
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+  } else {
+    // Development: use local file
+    serviceAccount = require(process.env.FIREBASE_CREDENTIALS_PATH || './film-demo-b3215-firebase-adminsdk-fbsvc-52da389e4c.json');
+  }
+  
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log('Firebase Admin initialized');
+} catch (error) {
+  console.error('Firebase Admin error:', error.message);
+}
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 
-// Kết nối MongoDB
-mongoose.connect(process.env.MONGO_URI, {
+// MongoDB connection - SỬA CHO PRODUCTION
+const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
+mongoose.connect(mongoURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.log('MongoDB connection error:', err));
 
-// Middleware kiểm tra token
+// Middleware kiểm tra token - GIỮ NGUYÊN
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) {
@@ -50,9 +76,13 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Routes
+// Routes - GIỮ NGUYÊN
 app.get('/', (req, res) => {
-  res.send('Backend is running!');
+  res.json({ 
+    message: 'MovieHub Backend is running!',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.get('/protected', authenticate, (req, res) => {
@@ -65,15 +95,24 @@ app.get('/protected', authenticate, (req, res) => {
   });
 });
 
-const authRoutes = require('./routes/auth');
-const movieRoutes = require('./routes/movies');
-const userRoutes = require('./routes/users'); // Thêm route users
-app.use('/api/auth', authRoutes);
-app.use('/api/movies', movieRoutes);
-app.use('/api/users', userRoutes); // Thêm vào server
+// Load routes với error handling
+try {
+  const authRoutes = require('./routes/auth');
+  const movieRoutes = require('./routes/movies');
+  const userRoutes = require('./routes/users');
+  
+  app.use('/api/auth', authRoutes);
+  app.use('/api/movies', movieRoutes);
+  app.use('/api/users', userRoutes);
+  
+  console.log('All routes loaded successfully');
+} catch (error) {
+  console.error('Route loading error:', error.message);
+}
 
-// Khởi động server
+// Khởi động server - GIỮ NGUYÊN
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
