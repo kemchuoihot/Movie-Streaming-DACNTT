@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000/api/movies';
-
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://movie-streaming-dacntt-production.up.railway.app/api/movies'
+  : 'http://localhost:5000/api/movies';
 // Lấy danh sách phim mới cập nhật
 export const fetchDataFromAPI = async () => {
   try {

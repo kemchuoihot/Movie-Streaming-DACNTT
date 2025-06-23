@@ -41,15 +41,22 @@ const History = () => {
   const fetchHistory = async (token) => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/api/movies/history", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/history`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       console.log("Watch history response:", response.data);
       setHistory(response.data || []);
       setError("");
     } catch (err) {
       console.error("Error fetching watch history:", err.response?.data || err);
-      const message = err.response?.data?.message || "Không thể tải lịch sử xem phim. Vui lòng thử lại.";
+      const message =
+        err.response?.data?.message ||
+        "Không thể tải lịch sử xem phim. Vui lòng thử lại.";
       setError(message);
       toast.error(message);
     } finally {
@@ -83,7 +90,9 @@ const History = () => {
       // Xử lý dạng "2h 30m" hoặc "2h"
       else if (time.includes("h")) {
         const hours = parseInt(time.split("h")[0]) || 0;
-        const mins = time.includes("m") ? parseInt(time.split("h")[1].split("m")[0]) || 0 : 0;
+        const mins = time.includes("m")
+          ? parseInt(time.split("h")[1].split("m")[0]) || 0
+          : 0;
         totalMins = hours * 60 + mins;
       }
       // Xử lý dạng "10 tập"
@@ -111,22 +120,30 @@ const History = () => {
       if (!token) {
         throw new Error("No auth token found");
       }
-      await axios.delete(`http://localhost:5000/api/movies/history/${slug}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/history/${slug}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setHistory(history.filter((entry) => entry.slug !== slug));
       toast.success("Đã xóa phim khỏi lịch sử!");
       setError("");
     } catch (err) {
       console.error("Error removing history:", err);
-      const message = err.response?.data?.message || "Không thể xóa phim khỏi lịch sử.";
+      const message =
+        err.response?.data?.message || "Không thể xóa phim khỏi lịch sử.";
       setError(message);
       toast.error(message);
     }
   };
 
   if (!user) {
-    return <div className="min-h-screen bg-[#06121e] text-white">Đang tải...</div>;
+    return (
+      <div className="min-h-screen bg-[#06121e] text-white">Đang tải...</div>
+    );
   }
 
   return (
@@ -155,7 +172,9 @@ const History = () => {
           {loading ? (
             <p className="text-white text-center py-4">Đang tải...</p>
           ) : history.length === 0 ? (
-            <p className="text-gray-300 text-center py-4">Bạn chưa có lịch sử xem phim.</p>
+            <p className="text-gray-300 text-center py-4">
+              Bạn chưa có lịch sử xem phim.
+            </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mx-auto max-w-screen-xl">
               {history.map((entry) => (
@@ -163,7 +182,10 @@ const History = () => {
                   key={entry.slug}
                   className="flex flex-col items-center border border-gray-700 rounded-lg shadow hover:shadow-lg transition-shadow duration-300 p-4 bg-transparent group"
                 >
-                  <Link to={`/watch/${entry.slug}?t=${entry.stoppedAt}`} className="w-full flex justify-center rounded-3xl">
+                  <Link
+                    to={`/watch/${entry.slug}?t=${entry.stoppedAt}`}
+                    className="w-full flex justify-center rounded-3xl"
+                  >
                     <div className="w-full h-80 flex items-center justify-center overflow-hidden mb-2 rounded-xl overflow-hidden transform hover:scale-105 transition-transform duration-300">
                       <LazyLoadImage
                         effect="blur"
@@ -173,9 +195,12 @@ const History = () => {
                       />
                     </div>
                   </Link>
-                  <h3 className="text-white text-sm font-medium text-center truncate w-full mb-2">{entry.name}</h3>
+                  <h3 className="text-white text-sm font-medium text-center truncate w-full mb-2">
+                    {entry.name}
+                  </h3>
                   <p className="text-gray-400 text-xs text-center mb-2">
-                    Đã xem: {formatTime(entry.stoppedAt)} / {formatDuration(entry.duration || entry.time)}
+                    Đã xem: {formatTime(entry.stoppedAt)} /{" "}
+                    {formatDuration(entry.duration || entry.time)}
                   </p>
                   <button
                     onClick={() => handleRemoveHistory(entry.slug)}

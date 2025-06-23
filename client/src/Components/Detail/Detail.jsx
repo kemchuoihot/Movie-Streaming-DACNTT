@@ -42,10 +42,14 @@ const Detail = () => {
           console.log("User ID:", user.uid);
           let displayName = user.displayName || user.email || "Người dùng";
           if (!user.displayName) {
-            const newDisplayName = prompt("Vui lòng nhập tên hiển thị của bạn:");
+            const newDisplayName = prompt(
+              "Vui lòng nhập tên hiển thị của bạn:"
+            );
             if (newDisplayName) {
               displayName = newDisplayName;
-              await auth.currentUser.updateProfile({ displayName: newDisplayName });
+              await auth.currentUser.updateProfile({
+                displayName: newDisplayName,
+              });
             }
           }
           setUserDisplayName(displayName);
@@ -71,10 +75,17 @@ const Detail = () => {
 
   const fetchUserRating = async (userId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/movies/${slug}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-      });
-      console.log('Fetched movie data:', response.data);
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/${slug}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+      console.log("Fetched movie data:", response.data);
       const movie = response.data.movie;
       setFilm({ movie });
       const ratings = movie.ratings || [];
@@ -88,7 +99,9 @@ const Detail = () => {
       }
       const averageRating =
         ratings.length > 0
-          ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
+          ? (
+              ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+            ).toFixed(1)
           : 0;
       setFilm((prevFilm) => ({
         ...prevFilm,
@@ -101,9 +114,16 @@ const Detail = () => {
 
   const checkFavorite = async (user) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/movies/favorites", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-      });
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/favorites`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
       setIsFavorite(response.data.some((movie) => movie.slug === slug));
     } catch (err) {
       console.error("Error checking favorite:", err);
@@ -141,14 +161,18 @@ const Detail = () => {
     }
     try {
       await axios.post(
-        `http://localhost:5000/api/movies/${slug}/rating`,
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/${slug}/rating`,
         {
           rating,
           comment,
           displayName: userDisplayName,
         },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
         }
       );
       toast.success("Đánh giá của bạn đã được gửi!");
@@ -159,7 +183,8 @@ const Detail = () => {
     } catch (error) {
       console.error("Failed to submit rating:", error);
       toast.error(
-        error.response?.data?.message || "Không thể gửi đánh giá. Vui lòng thử lại."
+        error.response?.data?.message ||
+          "Không thể gửi đánh giá. Vui lòng thử lại."
       );
     }
   };
@@ -178,7 +203,9 @@ const Detail = () => {
       }
       if (isFavorite) {
         const response = await axios.delete(
-          `http://localhost:5000/api/movies/favorites/${slug}`,
+          `${
+            process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+          }/api/movies/favorites/${slug}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -187,7 +214,9 @@ const Detail = () => {
         toast.success("Xóa khỏi yêu thích!");
       } else {
         const response = await axios.post(
-          "http://localhost:5000/api/movies/favorites",
+          `${
+            process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+          }/api/movies/favorites`,
           { slug },
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -199,7 +228,8 @@ const Detail = () => {
     } catch (err) {
       console.error("Error toggling favorite:", err);
       setFavoriteError(
-        err.response?.data?.message || "Failed to update favorites. Please try again."
+        err.response?.data?.message ||
+          "Failed to update favorites. Please try again."
       );
       toast.error(err.response?.data?.message || "Failed to update favorites.");
     } finally {
@@ -213,9 +243,16 @@ const Detail = () => {
       return;
     }
     try {
-      await axios.delete(`http://localhost:5000/api/movies/${slug}/rating/${userId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-      });
+      await axios.delete(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/${slug}/rating/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
       toast.success("Bình luận đã được xóa!");
       fetchUserRating(auth.currentUser.uid);
     } catch (error) {
@@ -245,7 +282,7 @@ const Detail = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-slate-900/30"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-transparent to-slate-900/60"></div>
       </div>
-      
+
       <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 px-4">
         <div className="container max-w-screen-xl mx-auto flex flex-col lg:flex-row">
           {/* Poster và Controls */}
@@ -259,7 +296,7 @@ const Detail = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
-            
+
             {/* Nút Xem Ngay */}
             <Link to={`/watch/${slug}`}>
               <button className="group relative w-full mt-10 inline-flex items-center justify-center p-5 px-12 py-3.5 overflow-hidden font-medium text-white transition duration-300 ease-out rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105">
@@ -271,7 +308,7 @@ const Detail = () => {
                 </span>
               </button>
             </Link>
-            
+
             {/* Nút Yêu thích */}
             <button
               onClick={handleToggleFavorite}
@@ -289,18 +326,22 @@ const Detail = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-center">
-                  <i className={`bx ${isFavorite ? "bxs-heart" : "bx-heart"} text-xl mr-2`}></i>
+                  <i
+                    className={`bx ${
+                      isFavorite ? "bxs-heart" : "bx-heart"
+                    } text-xl mr-2`}
+                  ></i>
                   {isFavorite ? "Đã yêu thích" : "Thêm vào yêu thích"}
                 </div>
               )}
             </button>
-            
+
             {favoriteError && (
               <p className="text-red-400 mt-2 text-center bg-red-500/20 p-2 rounded-lg border border-red-500/30">
                 {favoriteError}
               </p>
             )}
-            
+
             {/* Rating Section */}
             <div className="mt-6 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
               {isLoggedIn ? (
@@ -308,8 +349,12 @@ const Detail = () => {
                   {hasRated ? (
                     <div className="text-center">
                       <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-4 border border-green-500/30 mb-4">
-                        <p className="text-white mb-2">Bạn đã đánh giá: {rating} sao</p>
-                        {comment && <p className="text-gray-300 mb-3">"{comment}"</p>}
+                        <p className="text-white mb-2">
+                          Bạn đã đánh giá: {rating} sao
+                        </p>
+                        {comment && (
+                          <p className="text-gray-300 mb-3">"{comment}"</p>
+                        )}
                         <button
                           onClick={() => setHasRated(false)}
                           className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm hover:shadow-lg transition-all duration-300"
@@ -321,7 +366,9 @@ const Detail = () => {
                   ) : (
                     !submitted && (
                       <div className="space-y-4">
-                        <h3 className="text-white font-semibold text-center mb-4">Đánh giá phim</h3>
+                        <h3 className="text-white font-semibold text-center mb-4">
+                          Đánh giá phim
+                        </h3>
                         <div className="flex justify-center space-x-1 mb-4">
                           {[...Array(5)].map((_, i) => {
                             const ratingValue = i + 1;
@@ -337,7 +384,10 @@ const Detail = () => {
                                 <i
                                   className="bx bxs-star cursor-pointer text-3xl transition-all duration-200 hover:scale-110"
                                   style={{
-                                    color: ratingValue <= (hover || rating) ? "#ffc107" : "#4a5568",
+                                    color:
+                                      ratingValue <= (hover || rating)
+                                        ? "#ffc107"
+                                        : "#4a5568",
                                   }}
                                   onMouseEnter={() => setHover(ratingValue)}
                                   onMouseLeave={() => setHover(null)}
@@ -373,7 +423,9 @@ const Detail = () => {
               ) : (
                 <div className="text-center py-4">
                   <i className="bx bx-user-circle text-3xl text-gray-400 mb-2"></i>
-                  <p className="text-gray-300 mb-3">Vui lòng đăng nhập để đánh giá</p>
+                  <p className="text-gray-300 mb-3">
+                    Vui lòng đăng nhập để đánh giá
+                  </p>
                   <Link
                     to="/signin"
                     className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm hover:shadow-lg transition-all duration-300"
@@ -384,7 +436,7 @@ const Detail = () => {
               )}
             </div>
           </div>
-          
+
           {/* Thông tin phim */}
           <div className="w-full lg:pl-12">
             <div className="relative -top-72">
@@ -395,15 +447,17 @@ const Detail = () => {
                 {film.movie.name}
               </h2>
               <h5 className="text-2xl text-white mt-2">({film.movie.year})</h5>
-              
+
               <div className="flex flex-wrap items-center gap-4 mt-4">
                 <span className="text-lg text-white">{film.movie.time}</span>
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 rounded-full font-bold flex items-center">
                   <i className="bx bxs-star mr-1"></i>
-                  {film.movie.tmdb.vote_average === 0 ? "N/A" : film.movie.tmdb.vote_average}
+                  {film.movie.tmdb.vote_average === 0
+                    ? "N/A"
+                    : film.movie.tmdb.vote_average}
                 </span>
               </div>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
                 <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
                   <h3 className="text-white font-semibold mb-2 flex items-center">
@@ -423,7 +477,7 @@ const Detail = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="relative -top-60">
               <div className="mb-6">
                 <h4 className="text-xl text-white mb-3 flex items-center">
@@ -431,7 +485,7 @@ const Detail = () => {
                   Thể loại:
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {film.movie.genre.split(', ').map((genre, index) => (
+                  {film.movie.genre.split(", ").map((genre, index) => (
                     <span
                       key={index}
                       className="bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-white px-3 py-1 rounded-full border border-purple-500/30 text-sm"
@@ -441,12 +495,16 @@ const Detail = () => {
                   ))}
                 </div>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 mb-8">
-                <h3 className="text-xl text-white font-semibold mb-4">Nội dung phim</h3>
-                <p className="text-gray-300 leading-relaxed">{film.movie?.content}</p>
+                <h3 className="text-xl text-white font-semibold mb-4">
+                  Nội dung phim
+                </h3>
+                <p className="text-gray-300 leading-relaxed">
+                  {film.movie?.content}
+                </p>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl text-white font-semibold">Trailer</h3>
@@ -465,7 +523,7 @@ const Detail = () => {
                 ></iframe>
               </div>
             </div>
-            
+
             {/* Danh sách đánh giá */}
             {film.movie.ratings && film.movie.ratings.length > 0 && (
               <div className="mb-10 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
@@ -482,7 +540,9 @@ const Detail = () => {
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
                           <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow-lg">
-                            {ratingItem.displayName ? ratingItem.displayName.charAt(0) : "U"}
+                            {ratingItem.displayName
+                              ? ratingItem.displayName.charAt(0)
+                              : "U"}
                           </div>
                         </div>
                         <div className="flex-1">
@@ -491,11 +551,15 @@ const Detail = () => {
                               {ratingItem.displayName || "Người dùng ẩn danh"}
                             </span>
                             <span className="text-xs text-gray-400">
-                              {new Date(ratingItem.createdAt).toLocaleDateString('vi-VN')}
+                              {new Date(
+                                ratingItem.createdAt
+                              ).toLocaleDateString("vi-VN")}
                             </span>
                           </div>
                           {ratingItem.comment && (
-                            <p className="text-gray-300 mb-3 leading-relaxed">"{ratingItem.comment}"</p>
+                            <p className="text-gray-300 mb-3 leading-relaxed">
+                              "{ratingItem.comment}"
+                            </p>
                           )}
                           <div className="flex items-center">
                             {[...Array(5)].map((_, i) => (
@@ -503,7 +567,10 @@ const Detail = () => {
                                 key={i}
                                 className="bx bxs-star text-xl"
                                 style={{
-                                  color: i < ratingItem.rating ? "#ffc107" : "#4a5568",
+                                  color:
+                                    i < ratingItem.rating
+                                      ? "#ffc107"
+                                      : "#4a5568",
                                 }}
                               ></i>
                             ))}
@@ -514,7 +581,9 @@ const Detail = () => {
                         </div>
                         {isAdmin && (
                           <button
-                            onClick={() => handleDeleteRating(ratingItem.userId)}
+                            onClick={() =>
+                              handleDeleteRating(ratingItem.userId)
+                            }
                             className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-red-500/20"
                             title="Xóa bình luận"
                           >
@@ -536,7 +605,9 @@ const Detail = () => {
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
           <div className="bg-white/10 backdrop-blur rounded-2xl p-6 w-full max-w-4xl mx-4 border border-white/20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-white">Trailer - {film.movie.name}</h3>
+              <h3 className="text-2xl font-bold text-white">
+                Trailer - {film.movie.name}
+              </h3>
               <button
                 onClick={() => setIsTrailerOpen(false)}
                 className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"

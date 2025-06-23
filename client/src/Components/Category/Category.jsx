@@ -13,15 +13,15 @@ const getTitle = (category) => {
 
 const getIcon = (category) => {
   const icons = {
-    "all": "bx-movie-play",
+    all: "bx-movie-play",
     "Hành Động": "bx-run",
-    "Tâm Lý": "bx-brain", 
+    "Tâm Lý": "bx-brain",
     "Chính Kịch": "bx-mask",
     "Kinh Dị": "bx-ghost",
     "Hài Hước": "bx-laugh",
     "Tình Cảm": "bx-heart",
     "Khoa Học Viễn Tưởng": "bx-planet",
-    "Phiêu Lưu": "bx-world"
+    "Phiêu Lưu": "bx-world",
   };
   return icons[category] || "bx-category";
 };
@@ -33,54 +33,58 @@ const CategoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(parseInt(page) || 1);
   const [totalPages, setTotalPages] = useState(1);
-  const [viewMode, setViewMode] = useState('grid'); // grid or list
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   useEffect(() => {
-  const fetchCategoryMovies = async () => {
-    setLoading(true);
-    try {
-      let url = "";
-      if (category === "all") {
-        url = "http://localhost:5000/api/movies/new";
-      } else {
-        url = `http://localhost:5000/api/movies/category/${category}`;
+    const fetchCategoryMovies = async () => {
+      setLoading(true);
+      try {
+        let url = "";
+        if (category === "all") {
+          url = `${
+            process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+          }/api/movies/new`;
+        } else {
+          url = `${
+            process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+          }/api/movies/category/${category}`;
+        }
+        const res = await axios.get(url, {
+          params: { page: currentPage, limit: 18 },
+        });
+
+        // Handle different response structures
+        let data = [];
+        let total = 0;
+
+        if (category === "all") {
+          // For /new endpoint
+          data = res.data.items || [];
+          total = res.data.totalItems || data.length;
+        } else {
+          // For /category endpoint
+          data = res.data.items || (res.data.data && res.data.data.items) || [];
+          total =
+            res.data.totalItems || res.data.data?.totalItems || data.length;
+        }
+
+        setMovies(data);
+        setTotalPages(Math.ceil(total / 18));
+      } catch (err) {
+        console.error("Error fetching movies:", err);
+        setMovies([]);
+      } finally {
+        setLoading(false);
       }
-      const res = await axios.get(url, {
-        params: { page: currentPage, limit: 18 },
-      });
-      
-      // Handle different response structures
-      let data = [];
-      let total = 0;
-      
-      if (category === "all") {
-        // For /new endpoint
-        data = res.data.items || [];
-        total = res.data.totalItems || data.length;
-      } else {
-        // For /category endpoint
-        data = res.data.items || (res.data.data && res.data.data.items) || [];
-        total = res.data.totalItems || res.data.data?.totalItems || data.length;
-      }
-      
-      setMovies(data);
-      setTotalPages(Math.ceil(total / 18));
-      
-    } catch (err) {
-      console.error("Error fetching movies:", err);
-      setMovies([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchCategoryMovies();
-}, [category, currentPage]);
+    };
+    fetchCategoryMovies();
+  }, [category, currentPage]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
       navigate(`/category/${category}/${newPage}`);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -109,7 +113,7 @@ const CategoryPage = () => {
         >
           <i className="bx bx-chevron-left"></i>
         </button>
-        
+
         {startPage > 1 && (
           <>
             <button
@@ -122,14 +126,14 @@ const CategoryPage = () => {
           </>
         )}
 
-        {pages.map(pageNum => (
+        {pages.map((pageNum) => (
           <button
             key={pageNum}
             onClick={() => handlePageChange(pageNum)}
             className={`px-4 py-2 rounded-xl border transition-all duration-300 ${
               pageNum === currentPage
-                ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold'
-                : 'bg-white/10 backdrop-blur text-white border-white/20 hover:bg-white/20'
+                ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold"
+                : "bg-white/10 backdrop-blur text-white border-white/20 hover:bg-white/20"
             }`}
           >
             {pageNum}
@@ -138,7 +142,9 @@ const CategoryPage = () => {
 
         {endPage < totalPages && (
           <>
-            {endPage < totalPages - 1 && <span className="text-white/50">...</span>}
+            {endPage < totalPages - 1 && (
+              <span className="text-white/50">...</span>
+            )}
             <button
               onClick={() => handlePageChange(totalPages)}
               className="px-4 py-2 bg-white/10 backdrop-blur text-white rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
@@ -175,39 +181,45 @@ const CategoryPage = () => {
           <div className="flex flex-col items-center mb-10 pt-20">
             <div className="flex items-center gap-4 mb-4">
               <div className="p-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl">
-                <i className={`bx ${getIcon(category)} text-3xl text-black`}></i>
+                <i
+                  className={`bx ${getIcon(category)} text-3xl text-black`}
+                ></i>
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-[Montserrat] text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 tracking-tight">
                 {getTitle(category)}
               </h1>
             </div>
             <div className="w-32 h-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
-            
+
             {/* Stats & View Toggle */}
             <div className="flex items-center gap-6 mt-6">
               <div className="bg-white/10 backdrop-blur rounded-2xl px-4 py-2 border border-white/20">
                 <span className="text-white/80 text-sm">
-                  Tìm thấy <span className="font-bold text-yellow-400">{movies.length}</span> phim
+                  Tìm thấy{" "}
+                  <span className="font-bold text-yellow-400">
+                    {movies.length}
+                  </span>{" "}
+                  phim
                 </span>
               </div>
-              
+
               <div className="flex bg-white/10 backdrop-blur rounded-2xl p-1 border border-white/20">
                 <button
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => setViewMode("grid")}
                   className={`px-3 py-2 rounded-xl transition-all duration-300 ${
-                    viewMode === 'grid'
-                      ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black'
-                      : 'text-white/70 hover:text-white'
+                    viewMode === "grid"
+                      ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-black"
+                      : "text-white/70 hover:text-white"
                   }`}
                 >
                   <i className="bx bx-grid-alt"></i>
                 </button>
                 <button
-                  onClick={() => setViewMode('list')}
+                  onClick={() => setViewMode("list")}
                   className={`px-3 py-2 rounded-xl transition-all duration-300 ${
-                    viewMode === 'list'
-                      ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black'
-                      : 'text-white/70 hover:text-white'
+                    viewMode === "list"
+                      ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-black"
+                      : "text-white/70 hover:text-white"
                   }`}
                 >
                   <i className="bx bx-list-ul"></i>
@@ -230,8 +242,12 @@ const CategoryPage = () => {
             <div className="flex flex-col items-center justify-center min-h-[400px]">
               <div className="bg-white/10 backdrop-blur rounded-3xl p-12 border border-white/20 text-center max-w-md">
                 <i className="bx bx-movie text-6xl text-white/50 mb-4"></i>
-                <h3 className="text-2xl font-bold text-white mb-2">Không có phim nào</h3>
-                <p className="text-white/70 mb-6">Danh mục này hiện chưa có phim. Hãy thử danh mục khác!</p>
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  Không có phim nào
+                </h3>
+                <p className="text-white/70 mb-6">
+                  Danh mục này hiện chưa có phim. Hãy thử danh mục khác!
+                </p>
                 <Link
                   to="/"
                   className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold rounded-xl hover:scale-105 transition-transform duration-300"
@@ -244,7 +260,7 @@ const CategoryPage = () => {
           ) : (
             // Movies Grid/List
             <>
-              {viewMode === 'grid' ? (
+              {viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 lg:gap-6">
                   {movies.map((item, idx) => (
                     <Link
@@ -259,10 +275,10 @@ const CategoryPage = () => {
                           alt={item.name}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         />
-                        
+
                         {/* Overlay Gradient */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        
+
                         {/* Badges */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1">
                           {item.year && (
@@ -290,7 +306,7 @@ const CategoryPage = () => {
                           {idx + 1}
                         </div>
                       </div>
-                      
+
                       {/* Movie Info */}
                       <div className="p-3">
                         <h3 className="text-white font-semibold text-sm truncate group-hover:text-yellow-400 transition-colors">
@@ -302,10 +318,12 @@ const CategoryPage = () => {
                           </p>
                         )}
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-white/50 text-xs">{item.year}</span>
+                          <span className="text-white/50 text-xs">
+                            {item.year}
+                          </span>
                           {item.genre && (
                             <span className="bg-white/20 text-white/80 text-xs px-2 py-1 rounded-full">
-                              {item.genre.split(',')[0]}
+                              {item.genre.split(",")[0]}
                             </span>
                           )}
                         </div>
@@ -330,7 +348,7 @@ const CategoryPage = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <h3 className="text-white font-semibold text-lg truncate group-hover:text-yellow-400 transition-colors">
                           {item.name}
@@ -343,10 +361,12 @@ const CategoryPage = () => {
                         <div className="flex items-center gap-4 mt-2 text-sm text-white/70">
                           <span>Năm: {item.year}</span>
                           {item.time && <span>Thời lượng: {item.time}</span>}
-                          {item.genre && <span>Thể loại: {item.genre.split(',')[0]}</span>}
+                          {item.genre && (
+                            <span>Thể loại: {item.genre.split(",")[0]}</span>
+                          )}
                         </div>
                       </div>
-                      
+
                       <div className="flex-shrink-0 ml-4">
                         <button className="bg-white/20 hover:bg-white/30 text-white rounded-full p-3 transition-colors">
                           <i className="bx bx-play text-xl"></i>
@@ -356,7 +376,7 @@ const CategoryPage = () => {
                   ))}
                 </div>
               )}
-              
+
               {/* Pagination */}
               {renderPagination()}
             </>

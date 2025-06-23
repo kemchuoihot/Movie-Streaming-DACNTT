@@ -41,15 +41,22 @@ const Favorites = () => {
   const fetchFavorites = async (token) => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/api/movies/favorites", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/favorites`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       console.log("Favorites response:", response.data); // Debug log
       setFavorites(response.data || []);
       setError("");
     } catch (err) {
       console.error("Error fetching favorites:", err.response?.data || err);
-      const message = err.response?.data?.message || "Không thể tải danh sách yêu thích. Vui lòng thử lại.";
+      const message =
+        err.response?.data?.message ||
+        "Không thể tải danh sách yêu thích. Vui lòng thử lại.";
       setError(message);
       toast.error(message);
     } finally {
@@ -63,22 +70,31 @@ const Favorites = () => {
       if (!token) {
         throw new Error("No auth token found");
       }
-      await axios.delete(`http://localhost:5000/api/movies/favorites/${slug}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `${
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+        }/api/movies/favorites/${slug}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setFavorites(favorites.filter((movie) => movie.slug !== slug));
       toast.success("Đã xóa phim khỏi danh sách yêu thích!");
       setError("");
     } catch (err) {
       console.error("Error removing favorite:", err);
-      const message = err.response?.data?.message || "Không thể xóa phim khỏi danh sách yêu thích.";
+      const message =
+        err.response?.data?.message ||
+        "Không thể xóa phim khỏi danh sách yêu thích.";
       setError(message);
       toast.error(message);
     }
   };
 
   if (!user) {
-    return <div className="min-h-screen bg-[#06121e] text-white">Đang tải...</div>;
+    return (
+      <div className="min-h-screen bg-[#06121e] text-white">Đang tải...</div>
+    );
   }
 
   return (
@@ -102,12 +118,16 @@ const Favorites = () => {
       <div className="flex-1 p-8">
         <div className="bg-transparent text-white rounded-lg shadow-none p-6 mt-6">
           <h2 className="text-2xl font-semibold mb-4">Phim yêu thích</h2>
-          <p className="text-gray-400 mb-6">Danh sách phim bạn đã thêm vào yêu thích</p>
+          <p className="text-gray-400 mb-6">
+            Danh sách phim bạn đã thêm vào yêu thích
+          </p>
           {error && <p className="text-red-500 mb-4">{error}</p>}
           {loading ? (
             <p className="text-white text-center py-4">Đang tải...</p>
           ) : favorites.length === 0 ? (
-            <p className="text-gray-300 text-center py-4">Bạn chưa có phim yêu thích nào.</p>
+            <p className="text-gray-300 text-center py-4">
+              Bạn chưa có phim yêu thích nào.
+            </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mx-auto max-w-screen-xl">
               {favorites.map((movie) => (
@@ -115,7 +135,10 @@ const Favorites = () => {
                   key={movie.slug}
                   className="flex flex-col items-center border border-gray-700 rounded-lg shadow hover:shadow-lg transition-shadow duration-300 p-4 bg-transparent group"
                 >
-                  <Link to={`/detail/${movie.slug}`} className="w-full flex justify-center rounded-3xl">
+                  <Link
+                    to={`/detail/${movie.slug}`}
+                    className="w-full flex justify-center rounded-3xl"
+                  >
                     <div className="w-full h-80 flex items-center justify-center overflow-hidden mb-2 rounded-xl overflow-hidden transform hover:scale-105 transition-transform duration-300">
                       <LazyLoadImage
                         effect="blur"
@@ -125,7 +148,9 @@ const Favorites = () => {
                       />
                     </div>
                   </Link>
-                  <h3 className="text-white text-sm font-medium text-center truncate w-full mb-2">{movie.name}</h3>
+                  <h3 className="text-white text-sm font-medium text-center truncate w-full mb-2">
+                    {movie.name}
+                  </h3>
                   <button
                     onClick={() => handleRemoveFavorite(movie.slug)}
                     className="bg-red-600 text-white rounded-full p-2 transition-colors duration-300 ease-in-out shadow-md hover:bg-red-700 hover:shadow-lg"
