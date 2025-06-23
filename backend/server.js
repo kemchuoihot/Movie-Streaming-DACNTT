@@ -12,6 +12,7 @@ app.use((req, res, next) => {
   // Support multiple origins for production
   const allowedOrigins = [
     'http://localhost:3000',
+    'https://movie-streaming-dacntt.vercel.app/',
     process.env.FRONTEND_URL // Sẽ set này trên Railway
   ].filter(Boolean);
   
