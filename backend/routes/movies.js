@@ -5,20 +5,66 @@ const User = require('../models/User');
 const admin = require('firebase-admin');
 
 const authenticate = async (req, res, next) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
   try {
+    const authHeader = req.headers.authorization;
+    console.log('🔍 Auth header received:', authHeader ? 'Bearer ***' : 'None');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No valid auth header');
+      return res.status(401).json({ 
+        message: 'No token provided or invalid format',
+        expected: 'Bearer <token>',
+        received: authHeader ? authHeader.substring(0, 20) + '...' : 'null'
+      });
+    }
+    
+    const token = authHeader.split('Bearer ')[1];
+    console.log('🔍 Token extracted, length:', token?.length);
+    
+    if (!token || token.length < 10) {
+      console.log('❌ Invalid token format');
+      return res.status(401).json({ message: 'Invalid token format' });
+    }
+    
+    // Verify token with Firebase
     const decodedToken = await admin.auth().verifyIdToken(token);
+    console.log('✅ Token verified for user:', decodedToken.uid);
+    
     req.user = decodedToken;
     next();
+    
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error('❌ Token verification error:', {
+      code: error.code,
+      message: error.message
+    });
+    
     if (error.code === 'auth/id-token-expired') {
-      return res.status(401).json({ message: 'Token has expired, please log in again' });
+      return res.status(401).json({ 
+        message: 'Token has expired, please refresh',
+        code: 'TOKEN_EXPIRED'
+      });
     }
-    res.status(401).json({ message: 'Invalid token', error: error.message });
+    
+    if (error.code === 'auth/argument-error') {
+      return res.status(401).json({ 
+        message: 'Invalid token format',
+        code: 'INVALID_FORMAT'
+      });
+    }
+    
+    if (error.code === 'auth/project-not-found') {
+      return res.status(500).json({ 
+        message: 'Firebase configuration error',
+        code: 'CONFIG_ERROR'
+      });
+    }
+    
+    return res.status(401).json({ 
+      message: 'Invalid token', 
+      error: error.message,
+      code: error.code || 'UNKNOWN_ERROR'
+    });
   }
 };
 

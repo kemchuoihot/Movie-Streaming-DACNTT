@@ -9,21 +9,30 @@ const app = express();
 
 // CORS cho production - CHỈ SỬA PHẦN NÀY
 app.use((req, res, next) => {
-  // Support multiple origins for production
+  // FIX: Remove trailing slash from Vercel URL
   const allowedOrigins = [
     'http://localhost:3000',
-    'https://movie-streaming-dacntt.vercel.app/',
-    process.env.FRONTEND_URL // Sẽ set này trên Railway
+    'https://movie-streaming-dacntt.vercel.app', 
+    process.env.FRONTEND_URL
   ].filter(Boolean);
   
   const origin = req.headers.origin;
+  console.log('Request origin:', origin); // Debug log
+  
   if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
     res.header('Access-Control-Allow-Origin', origin || 'http://localhost:3000');
   }
   
-  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // ✅ HANDLE OPTIONS preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight for:', req.url);
+    return res.status(200).end();
+  }
+  
   next();
 });
 
