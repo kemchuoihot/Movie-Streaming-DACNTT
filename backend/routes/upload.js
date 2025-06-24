@@ -1,4 +1,4 @@
-// routes/upload.js - COMPLETE ENHANCED VERSION WITH HLS MASTER PLAYLIST
+// routes/upload.js - COMPLETE ENHANCED VERSION WITH HLS MASTER PLAYLIST + 1080P
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
@@ -119,12 +119,15 @@ try {
     ffmpegAvailable = false;
 }
 
-// ✅ RESOLUTION CONFIGURATIONS
+// ✅ ENHANCED RESOLUTION CONFIGURATIONS WITH 1080P
 const resolutions = {
     360: { width: 640, height: 360, bitrate: 800 },
     480: { width: 854, height: 480, bitrate: 1400 },
     720: { width: 1280, height: 720, bitrate: 2800 },
     1080: { width: 1920, height: 1080, bitrate: 5000 },
+    // ✅ OPTIONAL: Add more resolutions
+    // 1440: { width: 2560, height: 1440, bitrate: 8000 },
+    // 2160: { width: 3840, height: 2160, bitrate: 15000 },
 };
 
 // ✅ UPLOAD TO R2 FUNCTION
@@ -185,7 +188,7 @@ const analyzeVideo = (inputPath) => {
     });
 };
 
-// ✅ MAIN VIDEO UPLOAD ENDPOINT WITH ENHANCED HLS TRANSCODING
+// ✅ MAIN VIDEO UPLOAD ENDPOINT WITH ENHANCED HLS TRANSCODING + 1080P
 router.post('/video', upload.single('video'), async (req, res) => {
     console.log('📤 === VIDEO UPLOAD REQUEST ===');
     
@@ -228,7 +231,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
         const inputPath = req.file.path;
         const id = uuidv4();
         
-        // ✅ PRIORITIZE HLS TRANSCODING
+        // ✅ PRIORITIZE HLS TRANSCODING WITH 1080P SUPPORT
         if (ffmpegAvailable && ffmpegLib) {
             try {
                 console.log('🔍 Analyzing video...');
@@ -236,27 +239,49 @@ router.post('/video', upload.single('video'), async (req, res) => {
                 
                 const outputDir = path.join(tempDir, `hls-${id}`);
                 
-                // ✅ ENHANCED HLS TRANSCODING WITH GUARANTEED MASTER
-                console.log('🎬 Starting enhanced HLS transcoding...');
+                // ✅ ENHANCED HLS TRANSCODING WITH GUARANTEED MASTER + 1080P
+                console.log('🎬 Starting enhanced HLS transcoding with 1080p support...');
                 
                 // Create output directory
                 fs.mkdirSync(outputDir, { recursive: true });
                 
-                // Filter resolutions based on input
+                // ✅ ENHANCED: Smart resolution filtering including 1080p
                 const inputHeight = videoInfo.height || 1080;
+                console.log(`📺 Input video resolution: ${videoInfo.width}x${inputHeight} (${inputHeight}p)`);
+                
+                // ✅ OPTION 1: Smart filtering (no upscaling)
                 const availableResolutions = Object.entries(resolutions).filter(([label, res]) => {
                     return res.height <= inputHeight;
                 });
                 
-                console.log(`🎬 Transcoding to ${availableResolutions.length} resolutions:`, 
+                // ✅ OPTION 2: Always include all resolutions (uncomment if wanted)
+                // const availableResolutions = Object.entries(resolutions);
+                
+                console.log(`🎬 Available resolutions for ${inputHeight}p input:`, 
                     availableResolutions.map(([label]) => label + 'p'));
+                console.log(`🎬 Transcoding to ${availableResolutions.length} resolutions...`);
                 
                 // ✅ SEQUENTIAL TRANSCODING FOR STABILITY
                 const transcodeResults = [];
                 
                 for (const [label, { width, height, bitrate }] of availableResolutions) {
                     try {
-                        console.log(`🎬 Starting ${label}p transcoding...`);
+                        console.log(`🎬 Starting ${label}p (${width}x${height}) transcoding...`);
+                        
+                        // ✅ Skip if trying to upscale
+                        if (height > inputHeight) {
+                            console.log(`⚠️ Skipping ${label}p - would upscale from ${inputHeight}p to ${height}p`);
+                            transcodeResults.push({
+                                label,
+                                width,
+                                height,
+                                bitrate,
+                                success: false,
+                                error: 'Skipped upscaling',
+                                skipped: true
+                            });
+                            continue;
+                        }
                         
                         await new Promise((resolve, reject) => {
                             const outputPath = path.join(outputDir, `index_${label}.m3u8`);
@@ -282,7 +307,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
                                     console.log(`🎬 FFmpeg command [${label}p]:`, commandLine.substring(0, 200) + '...');
                                 })
                                 .on('end', () => {
-                                    console.log(`✅ ${label}p transcoding completed`);
+                                    console.log(`✅ ${label}p (${width}x${height}) transcoding completed`);
                                     transcodeResults.push({
                                         label,
                                         width,
@@ -294,6 +319,9 @@ router.post('/video', upload.single('video'), async (req, res) => {
                                 })
                                 .on('error', (err, stdout, stderr) => {
                                     console.error(`❌ ${label}p transcoding failed:`, err.message);
+                                    if (stderr) {
+                                        console.error(`📄 STDERR [${label}p]:`, stderr.substring(0, 300));
+                                    }
                                     transcodeResults.push({
                                         label,
                                         width,
@@ -306,14 +334,15 @@ router.post('/video', upload.single('video'), async (req, res) => {
                                 })
                                 .on('progress', (progress) => {
                                     if (progress.percent) {
-                                        console.log(`🎬 ${label}p: ${Math.round(progress.percent)}%`);
+                                        console.log(`🎬 ${label}p progress: ${Math.round(progress.percent)}%`);
                                     }
                                 });
                             
-                            // Timeout protection
+                            // ✅ Enhanced timeout protection - longer for 1080p
+                            const timeoutDuration = height >= 1080 ? 10 * 60 * 1000 : 5 * 60 * 1000; // 10min for 1080p, 5min for others
                             const timeout = setTimeout(() => {
                                 command.kill('SIGKILL');
-                                console.error(`⏰ ${label}p transcoding timeout`);
+                                console.error(`⏰ ${label}p transcoding timeout after ${timeoutDuration/60000} minutes`);
                                 transcodeResults.push({
                                     label,
                                     width,
@@ -323,7 +352,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
                                     error: 'Timeout'
                                 });
                                 resolve();
-                            }, 5 * 60 * 1000); // 5 minutes per resolution
+                            }, timeoutDuration);
                             
                             command.on('end', () => clearTimeout(timeout));
                             command.on('error', () => clearTimeout(timeout));
@@ -344,20 +373,28 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     }
                 }
                 
-                // ✅ CHECK TRANSCODING RESULTS
+                // ✅ CHECK TRANSCODING RESULTS (EXCLUDE SKIPPED)
                 const successfulTranscodes = transcodeResults.filter(r => r.success);
-                console.log(`✅ Successful transcodes: ${successfulTranscodes.length}/${transcodeResults.length}`);
+                const failedTranscodes = transcodeResults.filter(r => !r.success && !r.skipped);
+                const skippedTranscodes = transcodeResults.filter(r => r.skipped);
+                
+                console.log(`✅ Transcoding Results:`);
+                console.log(`   • Successful: ${successfulTranscodes.length} (${successfulTranscodes.map(r => r.label + 'p').join(', ')})`);
+                console.log(`   • Failed: ${failedTranscodes.length}`);
+                console.log(`   • Skipped (upscaling): ${skippedTranscodes.length}`);
                 
                 if (successfulTranscodes.length === 0) {
                     throw new Error('All transcoding attempts failed');
                 }
                 
-                // ✅ CREATE MASTER PLAYLIST WITH SUCCESSFUL TRANSCODES
+                // ✅ CREATE MASTER PLAYLIST WITH SUCCESSFUL TRANSCODES (SORTED BY QUALITY)
                 const masterPath = path.join(outputDir, 'master.m3u8');
+                const sortedTranscodes = successfulTranscodes.sort((a, b) => a.height - b.height); // Sort by resolution
+                
                 const masterContent = [
                     '#EXTM3U',
                     '#EXT-X-VERSION:3',
-                    ...successfulTranscodes.map(({ label, width, height, bitrate }) => {
+                    ...sortedTranscodes.map(({ label, width, height, bitrate }) => {
                         return `#EXT-X-STREAM-INF:BANDWIDTH=${bitrate * 1000},RESOLUTION=${width}x${height},NAME="${height}p"\nindex_${label}.m3u8`;
                     }),
                 ].join('\n');
@@ -373,6 +410,11 @@ router.post('/video', upload.single('video'), async (req, res) => {
                 
                 console.log(`📁 Generated files: ${m3u8Files.length} playlists, ${tsFiles.length} segments`);
                 console.log('📁 Playlist files:', m3u8Files);
+                console.log('📁 Resolution breakdown:', {
+                    total: m3u8Files.length,
+                    master: m3u8Files.includes('master.m3u8') ? 1 : 0,
+                    qualities: m3u8Files.filter(f => f.startsWith('index_')).length
+                });
                 
                 if (!files.includes('master.m3u8')) {
                     throw new Error('Master playlist was not created');
@@ -401,7 +443,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
                 const uploadResults = await Promise.all(uploadPromises);
                 const successfulUploads = uploadResults.filter(r => r.success);
                 
-                console.log(`✅ Uploaded ${successfulUploads.length}/${uploadResults.length} files`);
+                console.log(`✅ Upload Results: ${successfulUploads.length}/${uploadResults.length} files uploaded successfully`);
                 
                 if (successfulUploads.length === 0) {
                     throw new Error('Failed to upload any files to R2');
@@ -416,15 +458,16 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     console.error('⚠️ Cleanup warning:', cleanupErr.message);
                 }
                 
-                // ✅ RETURN HLS MASTER URL
+                // ✅ RETURN HLS MASTER URL WITH ENHANCED INFO
                 const masterUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/hls/${id}/master.m3u8`;
                 console.log('🎬 HLS transcoding completed successfully!');
                 console.log('📺 Master URL:', masterUrl);
+                console.log('🎯 Available qualities:', successfulTranscodes.map(r => r.label + 'p').join(', '));
                 
                 return res.status(200).json({ 
                     success: true,
-                    url: masterUrl, // ✅ THIS IS THE KEY - RETURN HLS URL
-                    message: `Video transcoded to HLS với ${successfulTranscodes.length} chất lượng`,
+                    url: masterUrl, // ✅ HLS MASTER URL
+                    message: `Video transcoded to HLS với ${successfulTranscodes.length} chất lượng (${successfulTranscodes.map(r => r.label + 'p').join(', ')})`,
                     type: 'hls',
                     resolutions: successfulTranscodes.map(r => r.label + 'p'),
                     masterPlaylist: masterUrl,
@@ -432,8 +475,11 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     transcoding: {
                         total: transcodeResults.length,
                         successful: successfulTranscodes.length,
-                        failed: transcodeResults.length - successfulTranscodes.length,
-                        details: transcodeResults
+                        failed: failedTranscodes.length,
+                        skipped: skippedTranscodes.length,
+                        details: transcodeResults,
+                        inputResolution: `${videoInfo.width}x${inputHeight}`,
+                        outputResolutions: successfulTranscodes.map(r => `${r.width}x${r.height}`)
                     },
                     files: {
                         total: files.length,
@@ -445,7 +491,9 @@ router.post('/video', upload.single('video'), async (req, res) => {
                         duration: videoInfo.duration,
                         format: videoInfo.format,
                         originalSize: videoInfo.size,
-                        codec: videoInfo.videoCodec
+                        codec: videoInfo.videoCodec,
+                        originalResolution: `${videoInfo.width}x${inputHeight}`,
+                        fps: videoInfo.fps
                     }
                 });
                 
@@ -458,6 +506,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
                     const outputDir = path.join(tempDir, `hls-${id}`);
                     if (fs.existsSync(outputDir)) {
                         fs.rmSync(outputDir, { recursive: true, force: true });
+                        console.log('✅ Failed transcoding cleanup completed');
                     }
                 } catch (cleanupErr) {
                     console.error('⚠️ Transcoding cleanup error:', cleanupErr.message);
@@ -536,14 +585,20 @@ router.get('/health', (req, res) => {
             r2Storage: r2Available,
             hlsTranscoding: ffmpegAvailable,
             tempDirectory: tempDir,
-            tempDirExists: fs.existsSync(tempDir)
+            tempDirExists: fs.existsSync(tempDir),
+            supportedResolutions: Object.keys(resolutions).map(k => k + 'p')
         },
         ffmpeg: {
             available: ffmpegAvailable,
             path: isDocker || isRailway ? '/usr/bin/ffmpeg' : 'system'
         },
+        resolutions: {
+            supported: resolutions,
+            count: Object.keys(resolutions).length,
+            maxResolution: '1080p'
+        },
         message: ffmpegAvailable ? 
-            'Full HLS transcoding available' : 
+            `Full HLS transcoding available with ${Object.keys(resolutions).length} quality levels` : 
             'Simple upload only (no FFmpeg)',
         timestamp: new Date().toISOString()
     });
@@ -577,6 +632,11 @@ router.get('/debug', (req, res) => {
             binaryExists: fs.existsSync('/usr/bin/ffmpeg'),
             ffprobeExists: fs.existsSync('/usr/bin/ffprobe')
         },
+        resolutions: {
+            configured: resolutions,
+            count: Object.keys(resolutions).length,
+            list: Object.keys(resolutions).map(k => k + 'p')
+        },
         system: {
             platform: process.platform,
             arch: process.arch,
@@ -599,13 +659,23 @@ router.get('/test-hls/:id', async (req, res) => {
         if (testResponse.ok) {
             const masterContent = await testResponse.text();
             
+            // Parse available qualities from master playlist
+            const qualityMatches = masterContent.match(/RESOLUTION=(\d+x\d+)/g) || [];
+            const availableQualities = qualityMatches.map(match => {
+                const resolution = match.replace('RESOLUTION=', '');
+                const height = resolution.split('x')[1];
+                return height + 'p';
+            });
+            
             res.json({
                 success: true,
                 url: masterUrl,
                 accessible: true,
                 content: masterContent,
                 contentType: testResponse.headers.get('content-type'),
-                message: 'HLS master playlist is accessible'
+                availableQualities,
+                qualityCount: availableQualities.length,
+                message: `HLS master playlist accessible with ${availableQualities.length} quality levels`
             });
         } else {
             res.status(404).json({
@@ -624,6 +694,21 @@ router.get('/test-hls/:id', async (req, res) => {
             message: 'Failed to test HLS URL'
         });
     }
+});
+
+// ✅ LIST AVAILABLE RESOLUTIONS ENDPOINT
+router.get('/resolutions', (req, res) => {
+    res.json({
+        success: true,
+        resolutions: Object.entries(resolutions).map(([label, config]) => ({
+            label: label + 'p',
+            width: config.width,
+            height: config.height,
+            bitrate: config.bitrate + 'k'
+        })),
+        count: Object.keys(resolutions).length,
+        maxResolution: Math.max(...Object.keys(resolutions).map(Number)) + 'p'
+    });
 });
 
 module.exports = router;
