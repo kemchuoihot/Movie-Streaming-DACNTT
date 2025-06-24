@@ -116,15 +116,12 @@ if (!mongoURI) {
   process.exit(1);
 }
 
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(mongoURI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err);
     process.exit(1);
-  });
+});
 
 // Enhanced authenticate middleware
 const authenticate = async (req, res, next) => {

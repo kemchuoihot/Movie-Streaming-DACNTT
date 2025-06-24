@@ -1,6 +1,5 @@
 const express = require('express');
 const multer = require('multer');
-const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
@@ -77,15 +76,15 @@ try {
     r2Available = false;
 }
 
-// ✅ Check FFmpeg availability
+// ✅ Check FFmpeg availability - FIX VARIABLE CONFLICT
 let ffmpegAvailable = false;
-let ffmpeg;
+let ffmpegLib; // ✅ RENAMED FROM 'ffmpeg' to 'ffmpegLib'
 
 try {
-    ffmpeg = require('fluent-ffmpeg');
+    ffmpegLib = require('fluent-ffmpeg'); // ✅ USE ffmpegLib instead
     
     // Test FFmpeg
-    ffmpeg.getAvailableFormats((err, formats) => {
+    ffmpegLib.getAvailableFormats((err, formats) => {
         if (err) {
             console.log('⚠️ FFmpeg not available:', err.message);
             ffmpegAvailable = false;
@@ -163,7 +162,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
         const id = uuidv4();
         
         // ✅ HLS TRANSCODING (if FFmpeg available)
-        if (ffmpegAvailable) {
+        if (ffmpegAvailable && ffmpegLib) {
             console.log('🎬 Starting HLS transcoding...');
             
             const outputDir = path.join(isRailway ? '/tmp' : 'temp', `hls-${id}`);
@@ -180,7 +179,7 @@ router.post('/video', upload.single('video'), async (req, res) => {
                         
                         console.log(`🎬 Starting transcoding for ${label}p...`);
                         
-                        ffmpeg(inputPath)
+                        ffmpegLib(inputPath) // ✅ USE ffmpegLib instead of ffmpeg
                             .videoCodec('libx264')
                             .audioCodec('aac')
                             .size(`${width}x${height}`)
