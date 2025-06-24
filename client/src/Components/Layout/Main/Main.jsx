@@ -179,26 +179,65 @@ const Main = () => {
       setLoadingRecommendations(false);
     }
   };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        try {
-          const token = await currentUser.getIdToken();
-          localStorage.setItem("authToken", token);
-          setUser(currentUser);
-          await fetchHistory(token);
-          await fetchFavorites(token);
-        } catch (err) {
-          console.error("Error getting token:", err);
-          setError("Không thể xác thực. Vui lòng đăng nhập lại.");
-        }
-      } else {
-        setUser(null);
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    console.log('🔍 Auth state changed:', currentUser ? 'User found' : 'No user');
+    
+    if (currentUser) {
+      try {
+        console.log('🔍 Current user UID:', currentUser.uid);
+        console.log('🔍 Current user email:', currentUser.email);
+        
+        // Get token with detailed logging
+        const token = await currentUser.getIdToken();
+        console.log('🔍 Token obtained:', token ? `${token.substring(0, 30)}...` : 'NO TOKEN');
+        
+        localStorage.setItem("authToken", token);
+        setUser(currentUser);
+        
+        // Test token validity first
+        console.log('🔍 Testing token validity...');
+        await testTokenValidity(token);
+        
+        // Then fetch user data
+        await fetchHistory(token);
+        await fetchFavorites(token);
+        
+      } catch (err) {
+        console.error("❌ Error in auth flow:", err);
+        setError("Không thể xác thực. Vui lòng đăng nhập lại.");
       }
-    });
-    return () => unsubscribe();
-  }, []);
+    } else {
+      console.log('🔍 No user, clearing state');
+      setUser(null);
+      setHistory([]);
+      setFavorites([]);
+      localStorage.removeItem("authToken");
+    }
+  });
+  return () => unsubscribe();
+}, []);
+
+// Test token validity function
+const testTokenValidity = async (token) => {
+  try {
+    console.log('🔍 Testing token with backend...');
+    const response = await axios.get(
+      `${process.env.REACT_APP_BASE_URL || "http://localhost:5000"}/protected`,
+      {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      }
+    );
+    console.log('✅ Token test successful:', response.data);
+    return true;
+  } catch (err) {
+    console.error('❌ Token test failed:', err.response?.data || err.message);
+    throw err;
+  }
+};
 
   // Generate recommendations when user data is loaded
   useEffect(() => {
