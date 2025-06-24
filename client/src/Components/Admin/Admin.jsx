@@ -357,8 +357,8 @@ const Admin = () => {
 
   const handleUploadVideo = async () => {
     if (!videoFile) {
-      toast.error("Vui lòng chọn một file video để tải lên.");
-      return;
+        toast.error("Vui lòng chọn một file video để tải lên.");
+        return;
     }
 
     setUploadingVideo(true);
@@ -367,42 +367,106 @@ const Admin = () => {
     const formData = new FormData();
     formData.append("video", videoFile);
 
+    // Enhanced progress simulation for HLS
     let fakeProgress = 0;
     const progressInterval = setInterval(() => {
-      fakeProgress += Math.random() * 5;
-      if (fakeProgress >= 70) return;
-      setConversionProgress(Math.floor(fakeProgress));
-    }, 100);
+        fakeProgress += Math.random() * 2; // Slower for HLS transcoding
+        if (fakeProgress >= 90) return; // Don't complete until real completion
+        setConversionProgress(Math.floor(fakeProgress));
+    }, 300);
 
     try {
-      const response = await axios.post(
-        `${
-          process.env.REACT_APP_BASE_URL || "http://localhost:5000"
-        }/api/upload/video`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
+        console.log('🎬 Starting video upload and transcoding...');
+        
+        const response = await axios.post(
+            `${process.env.REACT_APP_BASE_URL || "http://localhost:5000"}/api/upload/video`,
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+                },
+                timeout: 600000, // 10 minutes timeout for HLS transcoding
+                onUploadProgress: (progressEvent) => {
+                    const uploadPercent = Math.round(
+                        (progressEvent.loaded * 30) / progressEvent.total // Upload is 30% of total progress
+                    );
+                    if (uploadPercent > fakeProgress) {
+                        setConversionProgress(uploadPercent);
+                    }
+                }
+            }
+        );
 
-      setConversionProgress(100); // chốt hoàn tất
-      setMovieForm((prev) => ({ ...prev, videoUrl: response.data.url }));
-      toast.success("Tải video thành công!");
-      setVideoFile(null);
+        clearInterval(progressInterval);
+        setConversionProgress(100);
+        
+        console.log('✅ Upload response:', response.data);
+        
+        // ✅ UPDATE MOVIE FORM WITH RETURNED URL
+        setMovieForm((prev) => ({ 
+            ...prev, 
+            videoUrl: response.data.url  // This will be either HLS master.m3u8 or direct video
+        }));
+        
+        // ✅ SUCCESS MESSAGE BASED ON UPLOAD TYPE
+        if (response.data.type === 'hls') {
+            toast.success(
+                `🎬 Video đã được chuyển đổi thành HLS thành công!\n` +
+                `✅ ${response.data.resolutions?.length || 0} chất lượng\n` +
+                `📺 Master playlist: ${response.data.masterPlaylist ? 'Có' : 'Không'}\n` +
+                `📁 ${response.data.files?.total || 0} files đã upload`
+            );
+            
+            // ✅ SHOW ADDITIONAL HLS INFO
+            if (response.data.transcoding) {
+                console.log('🎬 HLS Transcoding Details:', {
+                    successful: response.data.transcoding.successful,
+                    total: response.data.transcoding.total,
+                    resolutions: response.data.resolutions,
+                    masterUrl: response.data.url
+                });
+            }
+        } else {
+            toast.warning(
+                `📹 Video đã upload thành công nhưng không có HLS!\n` +
+                `⚠️ Chỉ có 1 chất lượng\n` +
+                `💡 Kiểm tra FFmpeg trên server`
+            );
+        }
+        
+        // ✅ LOG FINAL URL FOR VERIFICATION
+        console.log('📺 Final video URL for player:', response.data.url);
+        console.log('🎬 URL type:', response.data.type);
+        
+        setVideoFile(null);
+        
     } catch (err) {
-      console.error("Upload video error:", err);
-      toast.error(err.response?.data?.message || "Tải video thất bại!");
+        clearInterval(progressInterval);
+        console.error("❌ Upload video error:", err);
+        
+        let errorMessage = "Tải video thất bại!";
+        
+        if (err.code === 'ECONNABORTED') {
+            errorMessage = "Upload timeout - HLS transcoding mất quá nhiều thời gian";
+        } else if (err.response?.status === 413) {
+            errorMessage = "File quá lớn - vui lòng chọn video nhỏ hơn 500MB";
+        } else if (err.response?.status === 503) {
+            errorMessage = "Dịch vụ upload/transcoding tạm thời không khả dụng";
+        } else if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+        }
+        
+        toast.error(errorMessage);
+        
     } finally {
-      clearInterval(progressInterval);
-      setTimeout(() => {
-        setUploadingVideo(false);
-        setConversionProgress(0); // reset
-      }, 1500);
+        clearInterval(progressInterval);
+        setTimeout(() => {
+            setUploadingVideo(false);
+            setConversionProgress(0);
+        }, 2000);
     }
-  };
+};
 
   // Stats calculations
   const totalUsers = users.length;
