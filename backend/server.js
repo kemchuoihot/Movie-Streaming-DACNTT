@@ -214,13 +214,11 @@ try {
   const authRoutes = require('./routes/auth');
   const movieRoutes = require('./routes/movies');
   const userRoutes = require('./routes/users');
-  const uploadRoutes = require('./routes/upload');
-
+  
   app.use('/api/auth', authRoutes);
   app.use('/api/movies', movieRoutes);
   app.use('/api/users', userRoutes);
-  app.use('/api/upload', uploadRoutes);
-
+  
   console.log('✅ All routes loaded successfully');
 } catch (error) {
   console.error('❌ Route loading error:', error.message);

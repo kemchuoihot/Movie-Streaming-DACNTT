@@ -1,6 +1,6 @@
-// routes/upload.js - Railway optimized version
 const express = require('express');
 const multer = require('multer');
+const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
@@ -8,227 +8,182 @@ const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const router = express.Router();
+const upload = multer({ dest: 'temp/' });
 
-// ✅ IMPORTANT: Use memory storage for Railway (no temp files)
-const upload = multer({ 
-  storage: multer.memoryStorage(), // Store in memory instead of disk
-  limits: { 
-    fileSize: 500 * 1024 * 1024 // 500MB limit
-  }
-});
-
-// ✅ Environment validation
+// Validate environment variables at startup
 const validateEnv = () => {
-    const required = [
-        'CLOUDFLARE_R2_ACCESS_KEY_ID', 
-        'CLOUDFLARE_R2_SECRET_ACCESS_KEY', 
-        'CLOUDFLARE_ACCOUNT_ID', 
-        'CLOUDFLARE_R2_BUCKET_NAME', 
-        'CLOUDFLARE_R2_PUBLIC_URL'
-    ];
-    
+    const required = ['CLOUDFLARE_R2_ACCESS_KEY_ID', 'CLOUDFLARE_R2_SECRET_ACCESS_KEY', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_R2_BUCKET_NAME', 'CLOUDFLARE_R2_PUBLIC_URL'];
     const missing = required.filter(key => !process.env[key]);
-    
+
     if (missing.length > 0) {
-        console.error('❌ Missing environment variables:', missing);
-        return false;
+        console.error('Missing required environment variables:', missing);
+        throw new Error(`Missing environment variables: ${missing.join(', ')}`);
     }
-    
-    console.log('✅ All R2 environment variables are set');
-    console.log('🔍 Using R2 endpoint:', `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`);
-    console.log('🔍 Using bucket:', process.env.CLOUDFLARE_R2_BUCKET_NAME);
-    console.log('🔍 Public URL:', process.env.CLOUDFLARE_R2_PUBLIC_URL);
-    return true;
+
+    console.log('All required environment variables are set');
+    console.log('Using R2 endpoint:', `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`);
+    console.log('Using bucket:', process.env.CLOUDFLARE_R2_BUCKET_NAME);
+    console.log('Public URL:', process.env.CLOUDFLARE_R2_PUBLIC_URL);
 };
 
-// ✅ Initialize R2 client
-let s3Client;
-let r2Available = false;
+// Validate environment on module load
+validateEnv();
 
-try {
-    if (validateEnv()) {
-        s3Client = new S3Client({
-            region: 'auto',
-            endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-            credentials: {
-                accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
-                secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
-            },
-            forcePathStyle: true,
+// Configure S3Client for Cloudflare R2 (AWS SDK v3)
+const s3Client = new S3Client({
+    region: 'auto', // Cloudflare R2 often uses 'auto' or a placeholder
+    endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    },
+    forcePathStyle: true, // Quan trọng cho khả năng tương thích R2
+});
+
+// ✅ Check if FFmpeg is available
+const checkFFmpeg = () => {
+    return new Promise((resolve, reject) => {
+        ffmpeg.getAvailableFormats((err, formats) => {
+            if (err) {
+                console.error('FFmpeg not found or not working:', err.message);
+                reject(err);
+            } else {
+                console.log('FFmpeg is available and working');
+                resolve(true);
+            }
         });
-        r2Available = true;
-        console.log('✅ R2 Client initialized successfully');
-    }
-} catch (error) {
-    console.error('❌ R2 Client initialization failed:', error.message);
-    r2Available = false;
-}
+    });
+};
 
-// ✅ Upload function
+const resolutions = {
+    360: { width: 640, height: 360, bitrate: 800 },
+    480: { width: 854, height: 480, bitrate: 1400 },
+    720: { width: 1280, height: 720, bitrate: 2800 },
+    1080: { width: 1920, height: 1080, bitrate: 5000 },
+};
+
+// ✅ Cập nhật hàm uploadToR2 để sử dụng AWS SDK v3
 const uploadToR2 = async (key, body, contentType) => {
     try {
-        console.log(`📤 Uploading ${key} to R2...`);
-        
-        const command = new PutObjectCommand({
+        console.log(`Uploading ${key} to R2...`);
+        const command = new PutObjectCommand({ // ✅ Sử dụng PutObjectCommand
             Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME,
             Key: key,
             Body: body,
             ContentType: contentType,
-            CacheControl: 'public, max-age=31536000', // 1 year cache
+            ACL: 'public-read', // R2 hỗ trợ ACL public-read
         });
 
-        const response = await s3Client.send(command);
-        console.log(`✅ Successfully uploaded ${key}`);
-        return response;
-        
+        const response = await s3Client.send(command); // Gửi command qua s3Client
+
+        console.log(`Successfully uploaded ${key}`);
+        return response; // Trả về response từ R2 (có thể khác một chút so với v2)
     } catch (error) {
-        console.error(`❌ Failed to upload ${key}:`, error.message);
+        console.error(`Failed to upload ${key}:`, error);
         throw error;
     }
 };
 
-// ✅ Check if we're on Railway or local
-const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME === 'production' || !process.env.NODE_ENV || process.env.NODE_ENV === 'production';
-
-// ✅ SIMPLE VIDEO UPLOAD (No transcoding for Railway)
 router.post('/video', upload.single('video'), async (req, res) => {
-    try {
-        console.log('📤 === VIDEO UPLOAD REQUEST ===');
-        console.log('🔍 Environment:', isRailway ? 'Railway/Production' : 'Local');
-        
-        if (!req.file) {
-            return res.status(400).json({ 
-                message: 'No video file provided',
-                success: false 
-            });
-        }
-        
-        if (!r2Available) {
-            return res.status(500).json({ 
-                message: 'R2 storage not available - check environment variables',
-                success: false 
-            });
-        }
-        
-        console.log('📁 File received:', {
-            name: req.file.originalname,
-            size: `${(req.file.size / (1024 * 1024)).toFixed(2)} MB`,
-            type: req.file.mimetype
-        });
-        
-        // Generate unique filename
-        const id = uuidv4();
-        const fileExtension = path.extname(req.file.originalname);
-        const fileName = `${id}${fileExtension}`;
-        
-        // Upload original video directly to R2 (no transcoding on Railway)
-        console.log('📤 Uploading original video to R2...');
-        await uploadToR2(
-            `videos/${fileName}`, 
-            req.file.buffer, // Use buffer instead of file path
-            req.file.mimetype
-        );
-        
-        // Generate public URL
-        const videoUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/videos/${fileName}`;
-        
-        console.log('✅ Upload successful!');
-        console.log('🔗 Video URL:', videoUrl);
-        
-        return res.status(200).json({ 
-            success: true,
-            url: videoUrl,
-            message: isRailway ? 
-                'Video uploaded successfully (no transcoding on production)' : 
-                'Video uploaded successfully',
-            filename: fileName,
-            originalName: req.file.originalname,
-            size: req.file.size
-        });
-        
-    } catch (error) {
-        console.error('❌ Upload error:', error.message);
-        
-        return res.status(500).json({
-            success: false,
-            message: 'Video upload failed',
-            error: error.message,
-            environment: isRailway ? 'Railway/Production' : 'Local'
-        });
-    }
-});
-
-// ✅ ADVANCED UPLOAD WITH TRANSCODING (Local only)
-router.post('/video-hls', upload.single('video'), async (req, res) => {
-    
-    if (isRailway) {
-        return res.status(501).json({
-            success: false,
-            message: 'HLS transcoding not available on Railway/Production',
-            suggestion: 'Use /api/upload/video for simple upload',
-            alternative: 'Consider using external transcoding service like AWS MediaConvert'
-        });
-    }
-    
-    // Your original FFmpeg transcoding code goes here for local development
-    // This will only run on localhost where FFmpeg is available
-    
-    if (!req.file) {
-        return res.status(400).json({ message: 'Không có file video' });
-    }
+    if (!req.file) return res.status(400).json({ message: 'Không có file video' });
 
     const inputPath = req.file.path;
     const id = uuidv4();
     const outputDir = `temp/hls-${id}`;
 
     try {
-        // Ensure temp directory exists
-        if (!fs.existsSync('temp')) {
-            fs.mkdirSync('temp', { recursive: true });
-        }
-        
         fs.mkdirSync(outputDir, { recursive: true });
 
-        console.log('🎬 Starting video transcoding:', req.file.originalname);
-        console.log('📁 Output directory:', outputDir);
+        console.log('Bắt đầu xử lý video:', req.file.originalname);
+        console.log('Thư mục output:', outputDir);
 
-        // Your original FFmpeg transcoding logic here...
-        // (All the existing code for resolutions, ffmpeg processing, etc.)
-        
-        return res.status(200).json({ 
-            success: true,
-            message: 'HLS transcoding completed (local only)',
-            url: `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${id}/master.m3u8`
+        const tasks = Object.entries(resolutions).map(([label, { width, height, bitrate }]) => {
+            return new Promise((resolve, reject) => {
+                const outputPath = `${outputDir}/index_${label}.m3u8`;
+
+                ffmpeg(inputPath)
+                    .videoCodec('libx264')
+                    .audioCodec('aac')
+                    .size(`${width}x${height}`)
+                    .videoBitrate(bitrate)
+                    .outputOptions([
+                        '-preset veryfast',
+                        '-hls_time 6',
+                        '-hls_list_size 0',
+                        '-hls_segment_filename', `${outputDir}/index_${label}_%03d.ts`,
+                    ])
+                    .output(outputPath)
+                    .on('end', () => {
+                        console.log(`FFmpeg hoàn tất cho độ phân giải ${label}p`);
+                        resolve();
+                    })
+                    .on('error', (err, stdout, stderr) => {
+                        console.error(`Lỗi FFmpeg [${label}p]:`, err.message);
+                        console.error('stdout:', stdout);
+                        console.error('stderr:', stderr);
+                        reject(err);
+                    })
+                    .run();
+            });
         });
-        
-    } catch (error) {
-        console.error('❌ Transcoding error:', error);
-        
-        // Cleanup on error
+
+        await Promise.all(tasks);
+
+        const masterPath = `${outputDir}/master.m3u8`;
+        const masterContent = [
+            '#EXTM3U',
+            ...Object.keys(resolutions).map((label) => {
+                const { width, height, bitrate } = resolutions[label];
+                return `#EXT-X-STREAM-INF:BANDWIDTH=${bitrate * 1000},RESOLUTION=${width}x${height}\nindex_${label}.m3u8`;
+            }),
+        ].join('\n');
+
+        fs.writeFileSync(masterPath, masterContent);
+        console.log('Master playlist đã được tạo.');
+
+        const files = fs.readdirSync(outputDir);
+        console.log(`Found ${files.length} files to upload:`, files);
+
+        const uploadPromises = files.map((filename) => {
+            const fileContent = fs.readFileSync(path.join(outputDir, filename));
+            const key = `${id}/${filename}`;
+            const contentType = filename.endsWith('.m3u8')
+                ? 'application/x-mpegURL'
+                : 'video/MP2T';
+            return uploadToR2(key, fileContent, contentType);
+        });
+
+        await Promise.all(uploadPromises);
+        console.log('Tải tất cả file lên R2 thành công');
+
+        // Clean up temporary files
+        fs.rmSync(inputPath, { force: true });
+        fs.rmSync(outputDir, { recursive: true, force: true });
+        console.log('Dọn dẹp file tạm xong.');
+
+        // Use the correct R2 public URL from environment variable
+        const masterUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${id}/master.m3u8`;
+        console.log('URL trả về:', masterUrl);
+
+        return res.status(200).json({ url: masterUrl });
+
+    } catch (err) {
+        console.error('Transcode error:', err);
+
+        // Clean up on error
         try {
             if (fs.existsSync(inputPath)) fs.rmSync(inputPath, { force: true });
             if (fs.existsSync(outputDir)) fs.rmSync(outputDir, { recursive: true, force: true });
+            console.log('Cleaned up temporary files after error.');
         } catch (cleanupErr) {
             console.error('Error during cleanup:', cleanupErr);
         }
-        
+
         return res.status(500).json({
-            success: false,
-            message: 'Transcoding failed',
-            error: error.message
+            message: 'Lỗi xử lý video đa chất lượng',
+            error: err.message
         });
     }
-});
-
-// ✅ Health check endpoint
-router.get('/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        r2Available,
-        environment: isRailway ? 'Railway/Production' : 'Local',
-        transcoding: isRailway ? 'disabled' : 'enabled',
-        timestamp: new Date().toISOString()
-    });
 });
 
 module.exports = router;
