@@ -1,0 +1,13 @@
+# railway.toml
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/api/upload/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+
+# ✅ INCREASE MEMORY for video processing
+[resources]
+memory = 2048
+cpu = 1000
