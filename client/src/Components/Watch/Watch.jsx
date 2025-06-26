@@ -79,17 +79,18 @@ const Watch = () => {
     }
   }, [user, slug, location, navigate, loading]);
 
+ 
   useEffect(() => {
     const incrementView = async () => {
       try {
+        const baseUrl =
+          process.env.REACT_APP_BASE_URL || "http://localhost:5000";
         await axios.put(
-          `${
-            process.env.REACT_APP_BASE_URL || "http://localhost:5000"
-          }/api/movies/${slug}/view`,
+          `${baseUrl}/api/movies/${slug}/view`,
           {},
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`, 
             },
           }
         );
@@ -277,6 +278,7 @@ const Watch = () => {
       document.addEventListener("mozfullscreenchange", handleFullscreenChange);
       document.addEventListener("msfullscreenchange", handleFullscreenChange);
 
+      // Dòng 287-299: Fix URL construction
       const saveWatchHistory = async () => {
         if (
           !user ||
@@ -292,11 +294,12 @@ const Watch = () => {
         try {
           const token = localStorage.getItem("authToken");
           if (!token) return;
+
+          // ✅ FIXED: Proper URL construction
+          const baseUrl =
+            process.env.REACT_APP_BASE_URL || "http://localhost:5000";
           await axios.post(
-            process.env.REACT_APP_BASE_URL ||
-              `${
-                process.env.REACT_APP_BASE_URL || "http://localhost:5000"
-              }/api/movies/history`,
+            `${baseUrl}/api/movies/history`,
             { slug, stoppedAt },
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -305,7 +308,7 @@ const Watch = () => {
         }
       };
 
-      const historyInterval = setInterval(saveWatchHistory, 30000);
+      const historyInterval = setInterval(saveWatchHistory, 10000);
       window.addEventListener("beforeunload", saveWatchHistory);
 
       return () => {

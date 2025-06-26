@@ -306,6 +306,75 @@ router.get("/history", authenticate, async (req, res) => {
   }
 });
 
+router.delete("/history/:slug", authenticate, async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const userId = req.user.uid;
+    
+    console.log(`🗑️ Attempting to delete history: ${slug} for user: ${userId}`);
+    
+    // Tìm movie để lấy _id
+    const movie = await Movie.findOne({ slug });
+    if (!movie) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Movie not found" 
+      });
+    }
+    
+    // Tìm user và xóa entry khỏi watchHistory
+    const user = await User.findOne({ uid: userId });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+    
+    if (!Array.isArray(user.watchHistory)) {
+      return res.status(404).json({ 
+        success: false,
+        message: "No watch history found" 
+      });
+    }
+    
+    // Tìm và xóa entry
+    const initialLength = user.watchHistory.length;
+    user.watchHistory = user.watchHistory.filter(entry => 
+      !entry.movie.equals(movie._id)
+    );
+    
+    // Kiểm tra xem có entry nào bị xóa không
+    if (user.watchHistory.length === initialLength) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Movie not found in watch history" 
+      });
+    }
+    
+    await user.save();
+    
+    console.log(`✅ Successfully deleted history: ${slug} for user: ${userId}`);
+    
+    res.status(200).json({
+      success: true,
+      message: "Movie removed from watch history successfully",
+      deletedMovie: {
+        slug: movie.slug,
+        name: movie.name
+      }
+    });
+    
+  } catch (error) {
+    console.error("❌ Error deleting watch history:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error deleting watch history", 
+      error: error.message 
+    });
+  }
+});
+
 // Hàm hỗ trợ chuyển đổi duration thành phút
 function parseDuration(time) {
   if (!time) return 0;
